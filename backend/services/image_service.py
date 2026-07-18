@@ -49,43 +49,65 @@ async def validate_and_save(file_bytes: bytes, content_type: str, slot: str) -> 
     return {"filename": filename, "path": str(save_path), "width": width, "height": height}
 
 
-def _call_fashn_api(person_path: Path, garment_path: Path, category: str = "one-pieces") -> Path:
-    """
-    Send a person image + garment image to fashn-ai/fashn-vton-1.5 on HF Spaces.
-    
-    category options:
-      'tops'       → shirt, jacket, top, blouse
-      'bottoms'    → pants, skirt, shorts
-      'one-pieces' → full outfit, dress, jumpsuit, complete look (DEFAULT)
+# ── VTON Model Adapters ──────────────────────────────────────────────────────
+# Each adapter takes (person_path, garment_path) and returns a local Path
+# to the generated result. They normalize the different API signatures so
+# the fallback chain above can call them all the same way.
 
-    Returns the local path to the generated result image.
-    """
+def _try_sm4ll_vton(person_path: Path, garment_path: Path) -> Path:
+    """Adapter for sm4ll-VTON/sm4ll-VTON-Demo."""
     from gradio_client import Client, handle_file
-
-    # gradio_client auto-reads HUGGING_FACE_HUB_TOKEN from the environment.
-    # load_dotenv() at the top of this file ensures it is set before this runs.
-    client = Client("fashn-ai/fashn-vton-1.5")
-
+    logger.info("Trying model 1: sm4ll-VTON/sm4ll-VTON-Demo")
+    client = Client("sm4ll-VTON/sm4ll-VTON-Demo")
     result = client.predict(
-        person_image=handle_file(str(person_path)),
-        garment_image=handle_file(str(garment_path)),
-        category=category,
-        garment_photo_type="model",  # garment photo is worn by a model (not a flat-lay)
-        num_timesteps=50,
-        guidance_scale=1.5,
-        seed=42,
-        segmentation_free=True,      # better quality on complex outfits
-        api_name="/try_on"
+        base_img=handle_file(str(person_path)),
+        garment_img=handle_file(str(garment_path)),
+        workflow_choice="dress",   # always full-outfit mode
+        mask_img=None,
+        api_name="/generate"
     )
-
-    # fashn API returns a single Image dict: {"path": "...", "url": "...", ...}
     if isinstance(result, dict):
         return Path(result["path"])
-    # Fallback: some gradio versions wrap singles in a list/tuple
     if isinstance(result, (list, tuple)):
         r = result[0]
         return Path(r["path"] if isinstance(r, dict) else r)
     return Path(str(result))
+
+
+def _try_weshop_vton(person_path: Path, garment_path: Path) -> Path:
+    """Adapter for WeShopAI/WeShopAI-Virtual-Try-On.
+    No category input — always does full-outfit try-on by default.
+    Note: despite the confusing naming, WeShopAI expects:
+      main_image       → garment image
+      background_image → person image
+    """
+    from gradio_client import Client, handle_file
+    logger.info("Trying model 1 (primary): WeShopAI/WeShopAI-Virtual-Try-On")
+    client = Client("WeShopAI/WeShopAI-Virtual-Try-On")
+    result = client.predict(
+        main_image=handle_file(str(garment_path)),       # garment goes here
+        background_image=handle_file(str(person_path)),  # person goes here
+        api_name="/generate_image"
+    )
+    if isinstance(result, dict):
+        return Path(result["path"])
+    if isinstance(result, (list, tuple)):
+        r = result[0]
+        return Path(r["path"] if isinstance(r, dict) else r)
+    return Path(str(result))
+
+
+# Priority-ordered list of model adapters — first one that succeeds wins
+_VTON_MODELS = [
+    ("WeShopAI",    _try_weshop_vton),   # primary — better quality
+    ("sm4ll-VTON",  _try_sm4ll_vton),    # fallback
+]
+
+# Keywords that indicate a recoverable quota/capacity error → skip to next model
+_QUOTA_KEYWORDS = (
+    "zerogpu", "quota", "exceeded", "rate limit",
+    "too many", "try again", "unavailable", "capacity", "error"
+)
 
 
 def generate_ai_tryon(slots: dict) -> tuple[str, int]:
@@ -94,9 +116,9 @@ def generate_ai_tryon(slots: dict) -> tuple[str, int]:
       - slots['person']  → full-body photo of the person
       - slots['outfit']  → photo of the outfit to try on
 
-    Uses fashn-ai/fashn-vton-1.5 with category='one-pieces' so that
-    the entire outfit (top + bottom, dress, jumpsuit, etc.) is applied
-    to the person in a single, clean API call — no cropping hacks needed.
+    Tries each model in _VTON_MODELS in order. If a model hits a quota /
+    capacity error it is skipped and the next one is tried automatically.
+    Falls back to a MOCK image only when all models fail.
     """
     ensure_dirs()
     start = time.time()
@@ -118,52 +140,52 @@ def generate_ai_tryon(slots: dict) -> tuple[str, int]:
     if not garment_path.exists():
         raise ValueError(f"Outfit file not found: {outfit_filename}")
 
-    logger.info(f"AI Try-on (fashn-vton-1.5) | person={person_filename}  outfit={outfit_filename}")
+    logger.info(f"AI Try-on | person={person_filename}  outfit={outfit_filename}")
 
-    # ── 2. Single-pass API call ──────────────────────────────────────────────
-    try:
-        generated_path = _call_fashn_api(person_path, garment_path, category="one-pieces")
+    # ── 2. Model cascade — try each model in order ───────────────────────────
+    last_error = None
+    for model_name, adapter_fn in _VTON_MODELS:
+        try:
+            generated_path = adapter_fn(person_path, garment_path)
 
-        result_filename = f"ai_hf_{int(time.time() * 1000)}_{uuid.uuid4().hex[:6]}.webp"
-        result_path = RESULTS_DIR / result_filename
-        shutil.copy2(generated_path, result_path)
-
-        elapsed_ms = int((time.time() - start) * 1000)
-        logger.info(f"Done: {result_filename}  ({elapsed_ms / 1000:.1f}s)")
-        return result_filename, elapsed_ms
-
-    # ── 3. Quota / error fallback ────────────────────────────────────────────
-    except Exception as e:
-        # Log the raw error so we can debug what Hugging Face is actually returning
-        logger.error(f"RAW API ERROR [{type(e).__name__}]: {e}")
-        error_msg = str(e).lower()
-        is_quota = any(k in error_msg for k in (
-            "zerogpu", "quota", "exceeded", "rate limit",
-            "too many", "try again", "unavailable", "capacity"
-        ))
-
-        if is_quota:
-            logger.warning(f"HF ZeroGPU quota hit — MOCK fallback. {e}")
-            time.sleep(3)
-
-            mock_img = Image.open(person_path).convert("RGB")
-            draw = ImageDraw.Draw(mock_img)
-            draw.rectangle([0, 0, mock_img.width, 50], fill=(180, 0, 200))
-            try:
-                font = ImageFont.truetype("arial.ttf", 26)
-            except Exception:
-                font = ImageFont.load_default()
-            draw.text((10, 12), "MOCK — ZeroGPU quota exceeded, try again later", fill=(255, 255, 255), font=font)
-
-            mock_filename = f"ai_mock_{int(time.time() * 1000)}_{uuid.uuid4().hex[:6]}.jpg"
-            mock_path = RESULTS_DIR / mock_filename
-            mock_img.save(mock_path, "JPEG", quality=85)
+            result_filename = f"ai_{model_name.lower().replace('-','_')}_{int(time.time() * 1000)}_{uuid.uuid4().hex[:6]}.jpg"
+            result_path = RESULTS_DIR / result_filename
+            shutil.copy2(generated_path, result_path)
 
             elapsed_ms = int((time.time() - start) * 1000)
-            return mock_filename, elapsed_ms
+            logger.info(f"✓ {model_name} succeeded → {result_filename} ({elapsed_ms / 1000:.1f}s)")
+            return result_filename, elapsed_ms
 
-        logger.error(f"Fashn API error: {e}")
-        raise RuntimeError(f"AI generation failed: {e}")
+        except Exception as e:
+            error_msg = str(e).lower()
+            is_recoverable = any(k in error_msg for k in _QUOTA_KEYWORDS)
+            logger.warning(f"✗ {model_name} failed ({'quota/capacity' if is_recoverable else 'error'}): {e}")
+            last_error = e
+
+            if not is_recoverable:
+                # Hard error (bad input, auth, etc.) — no point trying other models
+                raise RuntimeError(f"AI generation failed ({model_name}): {e}")
+            # Recoverable → continue to next model
+
+    # ── 3. All models exhausted — return MOCK image ──────────────────────────
+    logger.warning(f"All VTON models failed — returning MOCK image. Last error: {last_error}")
+    time.sleep(2)
+
+    mock_img = Image.open(person_path).convert("RGB")
+    draw = ImageDraw.Draw(mock_img)
+    draw.rectangle([0, 0, mock_img.width, 50], fill=(120, 0, 180))
+    try:
+        font = ImageFont.truetype("arial.ttf", 24)
+    except Exception:
+        font = ImageFont.load_default()
+    draw.text((10, 12), "MOCK — All models are busy, try again soon", fill=(255, 255, 255), font=font)
+
+    mock_filename = f"ai_mock_{int(time.time() * 1000)}_{uuid.uuid4().hex[:6]}.jpg"
+    mock_path = RESULTS_DIR / mock_filename
+    mock_img.save(mock_path, "JPEG", quality=85)
+
+    elapsed_ms = int((time.time() - start) * 1000)
+    return mock_filename, elapsed_ms
 
 
 
