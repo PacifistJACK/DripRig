@@ -1,0 +1,47 @@
+/* ============================================================
+   DripRig — Shared Keyframe Animations
+   ============================================================ */
+
+/* Border Pulse (Rig Canvas border glow) — slow and smooth */
+@keyframes borderPulse {
+  0%   { border-color: #ffb800; box-shadow: 0 0 12px rgba(255,184,0,0.4), 0 24px 64px rgba(0,0,0,0.6); }
+  50%  { border-color: #ff0df5; box-shadow: 0 0 24px rgba(255,13,245,0.5), 0 24px 64px rgba(0,0,0,0.6); }
+  100% { border-color: #ffb800; box-shadow: 0 0 12px rgba(255,184,0,0.4), 0 24px 64px rgba(0,0,0,0.6); }
+}
+
+.animate-border-pulse {
+  animation: borderPulse 6s ease-in-out infinite;
+}
+
+/* Dot Pulse (status indicator) */
+@keyframes dotPulse {
+  0%   { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 217, 231, 0.7); }
+  70%  { transform: scale(1);    box-shadow: 0 0 0 8px rgba(0, 217, 231, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 217, 231, 0); }
+}
+
+.animate-pulse-cyan {
+  animation: dotPulse 2s ease infinite;
+}
+
+/* Float (decorative elements) */
+@keyframes float {
+  0%   { transform: translateY(0px); }
+  50%  { transform: translateY(-6px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Glow pulse on the result image */
+@keyframes resultGlow {
+  0%   { box-shadow: 0 0 30px rgba(255,184,0,0.15), 0 24px 64px rgba(0,0,0,0.7); }
+  50%  { box-shadow: 0 0 60px rgba(255,13,245,0.25), 0 32px 80px rgba(0,0,0,0.8); }
+  100% { box-shadow: 0 0 30px rgba(255,184,0,0.15), 0 24px 64px rgba(0,0,0,0.7); }
+}
+
+.animate-result-glow {
+  animation: resultGlow 4s ease-in-out infinite;
+}

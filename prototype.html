@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DripRig - Rig Canvas</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=Space+Grotesk:wght@700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-low": "#1c1b1b",
+                        "outline": "#9e8f78",
+                        "error": "#ffb4ab",
+                        "inverse-on-surface": "#313030",
+                        "secondary-container": "#ff0df5",
+                        "on-secondary": "#5c0058",
+                        "on-secondary-fixed-variant": "#82007d",
+                        "surface-container-lowest": "#0e0e0e",
+                        "inverse-surface": "#e5e2e1",
+                        "surface-tint": "#ffba20",
+                        "on-primary-fixed": "#271900",
+                        "surface-bright": "#3a3939",
+                        "on-secondary-fixed": "#390036",
+                        "surface-dim": "#131313",
+                        "surface": "#131313",
+                        "on-tertiary": "#00363a",
+                        "on-tertiary-fixed-variant": "#004f54",
+                        "primary": "#ffdca1",
+                        "on-surface-variant": "#d5c4ab",
+                        "secondary-fixed": "#ffd7f3",
+                        "on-primary-container": "#6b4c00",
+                        "inverse-primary": "#7c5800",
+                        "on-secondary-container": "#51004d",
+                        "on-error-container": "#ffdad6",
+                        "outline-variant": "#514532",
+                        "on-background": "#e5e2e1",
+                        "surface-container-high": "#2a2a2a",
+                        "surface-variant": "#353534",
+                        "surface-container": "#201f1f",
+                        "primary-fixed-dim": "#ffba20",
+                        "on-primary": "#412d00",
+                        "on-error": "#690005",
+                        "error-container": "#93000a",
+                        "on-primary-fixed-variant": "#5e4200",
+                        "secondary": "#ffabef",
+                        "tertiary-fixed": "#7df4ff",
+                        "on-tertiary-fixed": "#002022",
+                        "on-tertiary-container": "#005a60",
+                        "background": "#131313",
+                        "primary-container": "#ffb800",
+                        "tertiary-container": "#00d9e7",
+                        "secondary-fixed-dim": "#ffabef",
+                        "tertiary": "#6ef3ff",
+                        "tertiary-fixed-dim": "#00dbe9",
+                        "surface-container-highest": "#353534",
+                        "on-surface": "#e5e2e1",
+                        "primary-fixed": "#ffdea8"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "container-max": "1440px",
+                        "gutter": "16px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "40px",
+                        "unit": "4px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Space Grotesk"],
+                        "display-lg": ["Space Grotesk"],
+                        "label-md": ["Inter"],
+                        "headline-lg-mobile": ["Space Grotesk"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "display-md": ["Space Grotesk"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", { "lineHeight": "1.1", "letterSpacing": "0em", "fontWeight": "700" }],
+                        "display-lg": ["72px", { "lineHeight": "1.0", "letterSpacing": "-0.04em", "fontWeight": "700" }],
+                        "label-md": ["12px", { "lineHeight": "1.2", "letterSpacing": "0.1em", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "1.1", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "letterSpacing": "-0.01em", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "letterSpacing": "0em", "fontWeight": "400" }],
+                        "label-sm": ["10px", { "lineHeight": "1.2", "letterSpacing": "0.15em", "fontWeight": "700" }],
+                        "display-md": ["48px", { "lineHeight": "1.0", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Custom Animations & Styles */
+        body {
+            background-color: #080808; /* Level 0 Void */
+            color: #e5e2e1;
+            overflow-x: hidden;
+        }
+
+        /* Particle System */
+        #particles-js {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 1; /* Behind grid, above shader */
+            pointer-events: none;
+        }
+
+        /* Border Pulse Animation */
+        @keyframes borderPulse {
+            0% { border-color: #ffb800; box-shadow: 0 0 10px rgba(255, 184, 0, 0.5); }
+            50% { border-color: #ff0df5; box-shadow: 0 0 20px rgba(255, 13, 245, 0.8); }
+            100% { border-color: #ffb800; box-shadow: 0 0 10px rgba(255, 184, 0, 0.5); }
+        }
+        .animate-border-pulse {
+            animation: borderPulse 4s infinite alternate;
+        }
+
+        /* Shimmering Gradient CTA */
+        @keyframes shimmerGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .btn-shimmer {
+            background: linear-gradient(270deg, #ffb800, #ff0df5, #00d9e7);
+            background-size: 600% 600%;
+            animation: shimmerGradient 4s ease infinite;
+            transition: all 0.3s ease;
+        }
+        .btn-shimmer:hover {
+            box-shadow: 0 0 20px rgba(255, 184, 0, 0.8);
+            transform: scale(1.02);
+        }
+
+        /* Dot Pulse */
+        @keyframes dotPulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 240, 255, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 240, 255, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 240, 255, 0); }
+        }
+        .animate-pulse-cyan {
+            animation: dotPulse 2s infinite;
+        }
+
+        /* Entrance Animations */
+        .slide-up {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideUpAnim 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes slideUpAnim {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .delay-100 { animation-delay: 100ms; }
+        .delay-200 { animation-delay: 200ms; }
+        .delay-300 { animation-delay: 300ms; }
+        .delay-400 { animation-delay: 400ms; }
+
+        /* Grid Item Hover */
+        .grid-slot {
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            position: relative;
+            overflow: hidden;
+        }
+        .grid-slot::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        .grid-slot:hover {
+            transform: scale(1.05);
+            z-index: 10;
+        }
+        .grid-slot:hover::after {
+            border-color: #00d9e7;
+            box-shadow: inset 0 0 15px rgba(0, 217, 231, 0.3);
+        }
+        
+        /* Hide scrollbar for grid */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<!-- Particles.js Library -->
+<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background font-body-md text-on-surface antialiased min-h-screen flex flex-col relative overflow-hidden">
+<!-- Full-screen Shader Background -->
+<div class="fixed inset-0 z-0">
+<!-- STITCH_SHADER_START:ANIMATION_8 class="w-full h-full object-cover opacity-60" -->
+<div class="w-full h-full object-cover opacity-60" style="display:block;">
+<canvas id="shader-canvas-ANIMATION_8" style="display:block;width:100%;height:100%"></canvas>
+<script>
+(function() {
+  const canvas = document.getElementById('shader-canvas-ANIMATION_8');
+
+  // Sync the WebGL drawing-buffer size with the CSS-driven layout size.
+  // This fires on initial layout and whenever the element is resized.
+  function syncSize() {
+    const w = canvas.clientWidth  || 1280;
+    const h = canvas.clientHeight || 720;
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width  = w;
+      canvas.height = h;
+    }
+  }
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(syncSize).observe(canvas);
+  }
+  syncSize();
+
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  if (!gl) return;
+  const vs = `attribute vec2 a_position;
+varying vec2 v_texCoord;
+void main() {
+  v_texCoord = a_position * 0.5 + 0.5;
+  gl_Position = vec4(a_position, 0.0, 1.0);
+}`;
+  const fs = `precision highp float;
+varying vec2 v_texCoord;
+uniform float u_time;
+uniform vec2 u_resolution;
+
+// Multi-color Nuclear Sunset Palette
+vec3 color1 = vec3(1.0, 0.72, 0.0);    // Amber #FFB800
+vec3 color2 = vec3(1.0, 0.0, 0.96);    // Magenta #FF00F5
+vec3 color3 = vec3(0.0, 0.94, 1.0);    // Cyan #00F0FF
+vec3 bg = vec3(0.03, 0.03, 0.03);      // Dark Base
+
+void main() {
+    vec2 uv = v_texCoord;
+    vec2 p = uv * 2.0 - 1.0;
+    p.x *= u_resolution.x / u_resolution.y;
+
+    // Moving noise/liquid effect
+    float noise = sin(p.x * 2.0 + u_time) * cos(p.y * 2.0 + u_time * 0.5);
+    noise += sin(p.y * 3.0 - u_time * 0.8) * cos(p.x * 1.5 + u_time);
+    
+    // Gradient layers
+    float g1 = smoothstep(-1.0, 1.0, sin(uv.x * 3.0 + u_time * 0.5) + noise);
+    float g2 = smoothstep(-1.0, 1.0, cos(uv.y * 2.0 - u_time * 0.7) + noise);
+    float g3 = smoothstep(-0.5, 0.5, sin(length(p) - u_time));
+
+    vec3 finalColor = mix(bg, color1, g1 * 0.3);
+    finalColor = mix(finalColor, color2, g2 * 0.2);
+    finalColor = mix(finalColor, color3, g3 * 0.1);
+
+    // Scanline effect
+    float scanline = sin(uv.y * 200.0 + u_time * 10.0) * 0.02;
+    finalColor += scanline;
+
+    // Grid dots
+    vec2 grid = fract(uv * 30.0);
+    float dots = smoothstep(0.1, 0.05, length(grid - 0.5));
+    finalColor += dots * 0.05 * color1;
+
+    gl_FragColor = vec4(finalColor, 1.0);
+}`;
+  function cs(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    return s;
+  }
+  const prog = gl.createProgram();
+  gl.attachShader(prog, cs(gl.VERTEX_SHADER, vs));
+  gl.attachShader(prog, cs(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(prog);
+  gl.useProgram(prog);
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  const pos = gl.getAttribLocation(prog, 'a_position');
+  gl.enableVertexAttribArray(pos);
+  gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+  const uTime = gl.getUniformLocation(prog, 'u_time');
+  const uRes = gl.getUniformLocation(prog, 'u_resolution');
+  const uMouse = gl.getUniformLocation(prog, 'u_mouse');
+
+  // u_mouse is in pixel coordinates matching u_resolution (ShaderToy convention).
+  // Shaders that need normalized coords should use: u_mouse / u_resolution.
+  let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+  window.addEventListener('mousemove', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width && rect.height) {
+      const nx = (event.clientX - rect.left) / rect.width;
+      const ny = 1.0 - (event.clientY - rect.top) / rect.height;
+      mouse.x = nx * canvas.width;
+      mouse.y = ny * canvas.height;
+    }
+  });
+
+  function render(t) {
+    if (typeof ResizeObserver === 'undefined') syncSize();
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    if (uTime) gl.uniform1f(uTime, t * 0.001);
+    if (uRes) gl.uniform2f(uRes, canvas.width, canvas.height);
+    if (uMouse) gl.uniform2f(uMouse, mouse.x, mouse.y);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame(render);
+  }
+  render(0);
+})();
+</script>
+</div>
+<!-- STITCH_SHADER_END:ANIMATION_8 -->
+<!-- Overlay to ensure text readability -->
+<div class="absolute inset-0 bg-background/40 backdrop-blur-[2px]"></div>
+</div>
+<!-- Top App Bar (Shared Component Logic) -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center h-16 px-margin-mobile border-b border-surface-container-high bg-surface/80 backdrop-blur-md">
+<button aria-label="Menu" class="text-on-surface-variant hover:text-primary transition-all duration-150 active:scale-95">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">menu</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary uppercase tracking-tighter">
+            DRIPRIG
+        </h1>
+<button aria-label="Bookmarks" class="text-on-surface-variant hover:text-primary transition-all duration-150 active:scale-95">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">bookmark</span>
+</button>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 relative z-10 flex flex-col items-center justify-center pt-24 pb-24 px-margin-mobile w-full max-w-container-max mx-auto">
+<!-- Header Text -->
+<div class="w-full max-w-md text-center mb-8 slide-up">
+<h2 class="font-display-md text-display-md text-on-surface mb-2 uppercase">Rig Canvas</h2>
+<p class="font-body-md text-on-surface-variant">Construct your tactical fit.</p>
+</div>
+<!-- Central Rig Canvas (3:4 Ratio) -->
+<div class="relative w-full max-w-md aspect-[3/4] bg-surface-container-lowest/80 backdrop-blur-lg border-2 animate-border-pulse rounded-DEFAULT p-4 flex flex-col shadow-2xl slide-up delay-100">
+<!-- Particle Container behind grid -->
+<div class="absolute inset-0 rounded-DEFAULT overflow-hidden" id="particles-js"></div>
+<!-- Header inside canvas -->
+<div class="flex justify-between items-center mb-6 relative z-20">
+<div class="flex items-center space-x-2 bg-surface-container-high px-3 py-1 rounded-DEFAULT border border-surface-variant">
+<div class="w-2 h-2 rounded-full bg-tertiary-container animate-pulse-cyan"></div>
+<span class="font-label-md text-label-md text-on-surface uppercase">Rig Status: Active</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">ID: 89X-V2</span>
+</div>
+<!-- Equipment Grid (2x2) -->
+<div class="grid grid-cols-2 grid-rows-2 gap-4 flex-1 relative z-20">
+<!-- Slot 1: Headwear -->
+<div class="grid-slot bg-surface-container/90 border border-surface-variant rounded-DEFAULT flex flex-col items-center justify-center p-4 cursor-pointer slide-up delay-200 group">
+<span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2 group-hover:text-tertiary-container transition-colors" style="font-variation-settings: 'FILL' 0;">apparel</span>
+<span class="font-label-md text-label-md text-on-surface uppercase text-center">Headwear</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant mt-1">Empty Slot</span>
+</div>
+<!-- Slot 2: Core/Torso -->
+<div class="grid-slot bg-surface-container/90 border border-surface-variant rounded-DEFAULT flex flex-col items-center justify-center p-4 cursor-pointer slide-up delay-300 group">
+<span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2 group-hover:text-primary transition-colors" style="font-variation-settings: 'FILL' 0;">checkroom</span>
+<span class="font-label-md text-label-md text-on-surface uppercase text-center">Core Shell</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant mt-1">Empty Slot</span>
+</div>
+<!-- Slot 3: Lower/Legs -->
+<div class="grid-slot bg-surface-container/90 border border-surface-variant rounded-DEFAULT flex flex-col items-center justify-center p-4 cursor-pointer slide-up delay-300 group">
+<span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2 group-hover:text-primary transition-colors" style="font-variation-settings: 'FILL' 0;">laundry</span>
+<span class="font-label-md text-label-md text-on-surface uppercase text-center">Lower Chassis</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant mt-1">Empty Slot</span>
+</div>
+<!-- Slot 4: Footwear -->
+<div class="grid-slot bg-surface-container/90 border border-surface-variant rounded-DEFAULT flex flex-col items-center justify-center p-4 cursor-pointer slide-up delay-400 group">
+<span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2 group-hover:text-secondary transition-colors" style="font-variation-settings: 'FILL' 0;">skateboarding</span>
+<span class="font-label-md text-label-md text-on-surface uppercase text-center">Footwear</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant mt-1">Empty Slot</span>
+</div>
+</div>
+<!-- Bottom Stats / Info -->
+<div class="mt-6 flex justify-between items-end relative z-20 border-t border-surface-variant pt-4">
+<div>
+<span class="block font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Total Weight</span>
+<span class="font-body-lg text-body-lg text-on-surface font-bold">0.0 kg</span>
+</div>
+<div class="text-right">
+<span class="block font-label-sm text-label-sm text-on-surface-variant uppercase mb-1">Combat Rating</span>
+<span class="font-body-lg text-body-lg text-tertiary-container font-bold">N/A</span>
+</div>
+</div>
+</div>
+<!-- Primary CTA -->
+<div class="w-full max-w-md mt-8 slide-up delay-400 relative z-20">
+<button class="w-full btn-shimmer text-[#080808] font-headline-lg-mobile text-headline-lg-mobile uppercase py-4 rounded-DEFAULT font-bold flex items-center justify-center space-x-2">
+<span>Lock In Outfit</span>
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</button>
+</div>
+</main>
+<!-- Bottom Nav Bar (Shared Component Logic - Suppressed here based on rules) -->
+<!-- SUPPRESSED: The prompt implies a focused, transactional state ("Rig Canvas" building view) where standard nav might distract. 
+         However, if interpreted as a main tab (e.g. "Create"), we would show it. 
+         Following the strict rule: "If designing a user settings page... if transaction/focused... hide shell". 
+         Building an outfit is focused. Nav is hidden to prioritize Canvas. 
+         *Wait, I'll include TopAppBar for brand anchor, but hide BottomNav for focus.* 
+         Actually, let's include it to be safe if it's considered a primary ecosystem destination like "grid_view" (Explore/Dashboard).
+         Let's add it, mapping "grid_view" to active since it's a grid canvas. -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center h-16 px-margin-mobile border-t border-surface-container-high bg-surface/90 backdrop-blur-md md:hidden">
+<button aria-label="Precision" class="flex flex-col items-center justify-center text-on-surface-variant pt-2 hover:text-secondary transition-all active:scale-90">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">precision_manufacturing</span>
+</button>
+<!-- Active Tab: Rig Canvas relates closely to grid_view/construction -->
+<button aria-label="Grid View" class="flex flex-col items-center justify-center text-primary border-t-2 border-primary pt-2 active:scale-90 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">grid_view</span>
+</button>
+<button aria-label="Favorite" class="flex flex-col items-center justify-center text-on-surface-variant pt-2 hover:text-secondary transition-all active:scale-90">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">favorite</span>
+</button>
+<button aria-label="Person" class="flex flex-col items-center justify-center text-on-surface-variant pt-2 hover:text-secondary transition-all active:scale-90">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">person</span>
+</button>
+</nav>
+<!-- Initialize Particles.js -->
+<script>
+        document.addEventListener("DOMContentLoaded", function() {
+            if(window.particlesJS) {
+                particlesJS("particles-js", {
+                    "particles": {
+                        "number": { "value": 40, "density": { "enable": true, "value_area": 800 } },
+                        "color": { "value": ["#ffb800", "#ff0df5", "#00d9e7"] },
+                        "shape": { "type": "circle" },
+                        "opacity": { "value": 0.5, "random": true, "anim": { "enable": true, "speed": 1, "opacity_min": 0.1, "sync": false } },
+                        "size": { "value": 3, "random": true, "anim": { "enable": false } },
+                        "line_linked": { "enable": true, "distance": 150, "color": "#2a2a2a", "opacity": 0.4, "width": 1 },
+                        "move": { "enable": true, "speed": 2, "direction": "none", "random": true, "straight": false, "out_mode": "out", "bounce": false }
+                    },
+                    "interactivity": {
+                        "detect_on": "canvas",
+                        "events": {
+                            "onhover": { "enable": false },
+                            "onclick": { "enable": false },
+                            "resize": true
+                        }
+                    },
+                    "retina_detect": true
+                });
+            }
+        });
+    </script>
+</body></html>
