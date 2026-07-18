@@ -65,7 +65,9 @@ app.include_router(tryon.router)
 async def health_check():
     return {"status": "ok", "service": "DripRig API", "version": "0.1.0"}
 
+STATIC_DIR = BASE_DIR / "static"
+STATIC_DIR.mkdir(exist_ok=True)
 
-@app.get("/")
-async def root():
-    return {"message": "DripRig API — Visit /api/docs for interactive documentation."}
+# Mount the static directory for the Vite frontend at the root path
+# This must be the last route registered.
+app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
