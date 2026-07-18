@@ -8,8 +8,6 @@ from fastapi import APIRouter, HTTPException, Depends
 
 from backend.models.schemas import GenerateRequest, GenerateResponse
 from backend.services.image_service import generate_ai_tryon, UPLOAD_DIR
-from backend.services.db_service import record_generation
-from backend.middleware.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +45,8 @@ async def generate_outfit(
     # ── Run AI generation (blocking → threadpool) ────────────────────────────
     try:
         loop = asyncio.get_running_loop()
-        result_filename, processing_time_ms = await loop.run_in_executor(
-            None, generate_ai_tryon, slots
+        result_filename, processing_time_ms, model_used = await loop.run_in_executor(
+            None, generate_ai_tryon, slots, request.model or "fast"
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -56,18 +54,11 @@ async def generate_outfit(
         logger.exception("Failed to generate AI composite")
         raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
 
-    # ── Record to Firestore (non-fatal) ──────────────────────────────────────
-    # record_generation(
-    #     uid=user["uid"],
-    #     user_email=user.get("email", "—"),
-    #     person_filename=slots["person"],
-    #     outfit_filename=slots["outfit"],
-    #     result_filename=result_filename,
-    #     processing_time_ms=processing_time_ms,
-    # )
+
 
     return GenerateResponse(
         result_url=f"/results/{result_filename}",
         processing_time_ms=processing_time_ms,
         slots_used=[k for k, v in slots.items() if v],
+        model_used=model_used,
     )

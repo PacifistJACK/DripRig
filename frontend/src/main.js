@@ -10,13 +10,7 @@ import { createHeader } from './components/header.js';
 import { BottomNav } from './components/bottomnav.js';
 import { CanvasPage } from './pages/canvas.js';
 import { ResultPage } from './pages/result.js';
-import { LoginPage } from './pages/login.js';
-import { AdminPage } from './pages/admin.js';
-import {
-  initAuth,
-  signOut,
-  isCurrentUserAdmin,
-} from './services/firebase.js';
+
 
 // ============================================================
 // TOAST SYSTEM (exported so pages can import it)
@@ -55,8 +49,6 @@ export function showToast(message, type = 'info') {
 const state = {
   currentPage: null,
   resultData: null,
-  currentUser: null,
-  isAdmin: false,
 };
 
 // ============================================================
@@ -73,20 +65,7 @@ class Router {
   }
 
   init() {
-    // Show login immediately; swap to app once auth resolves
-    this._showLogin();
-  }
-
-  // ── Login (pre-auth) ─────────────────────────────────────────────────────
-  _showLogin() {
-    // Remove any existing shell
-    this.appEl.innerHTML = '';
-    this._shellBuilt = false;
-
-    const loginPage = new LoginPage({
-      onAuthSuccess: () => {}, // handled by auth state listener
-    });
-    loginPage.mount(this.appEl);
+    this.navigate('canvas');
   }
 
   // ── App shell (post-auth) ─────────────────────────────────────────────────
@@ -121,17 +100,7 @@ class Router {
 
   // ── Navigation ────────────────────────────────────────────────────────────
   navigate(page, data = null) {
-    // Auth guard — redirect to login if not signed in
-    if (!state.currentUser && page !== 'login') {
-      this._showLogin();
-      return;
-    }
 
-    // Admin guard — only admins can visit /admin
-    if (page === 'admin' && !state.isAdmin) {
-      showToast('Admin access required.', 'error');
-      return;
-    }
 
     this._buildShell();
 
@@ -161,12 +130,6 @@ class Router {
       this.currentPageEl = resultPage.render(data || state.resultData);
       this.contentEl.appendChild(this.currentPageEl);
 
-    } else if (page === 'admin') {
-      const adminPage = new AdminPage({
-        onBack: () => this.navigate('canvas'),
-      });
-      this.currentPageEl = adminPage.render();
-      this.contentEl.appendChild(this.currentPageEl);
     }
   }
 
@@ -175,28 +138,16 @@ class Router {
     // Remove existing menu
     document.getElementById('user-menu')?.remove();
 
-    const user = state.currentUser;
     const menu = document.createElement('div');
     menu.id = 'user-menu';
     menu.className = 'user-menu glass-card';
     menu.innerHTML = `
       <div class="user-menu__profile">
-        ${user?.photoURL
-          ? `<img class="user-menu__avatar" src="${user.photoURL}" alt=""/>`
-          : `<div class="user-menu__avatar user-menu__avatar--placeholder">${(user?.displayName || user?.email || '?')[0].toUpperCase()}</div>`
-        }
+        <div class="user-menu__avatar user-menu__avatar--placeholder">U</div>
         <div>
-          <div class="user-menu__name">${user?.displayName || 'User'}</div>
-          <div class="user-menu__email">${user?.email || ''}</div>
+          <div class="user-menu__name">User</div>
         </div>
       </div>
-      <hr class="user-menu__divider"/>
-      ${state.isAdmin ? `<button class="user-menu__item" id="menu-admin">
-        <span class="material-symbols-outlined">admin_panel_settings</span> Admin Dashboard
-      </button>` : ''}
-      <button class="user-menu__item user-menu__item--danger" id="menu-signout">
-        <span class="material-symbols-outlined">logout</span> Sign Out
-      </button>
     `;
 
     document.body.appendChild(menu);
@@ -209,30 +160,6 @@ class Router {
       }
     };
     setTimeout(() => document.addEventListener('click', close), 0);
-
-    menu.querySelector('#menu-signout')?.addEventListener('click', async () => {
-      menu.remove();
-      await signOut();
-    });
-
-    menu.querySelector('#menu-admin')?.addEventListener('click', () => {
-      menu.remove();
-      this.navigate('admin');
-    });
-  }
-
-  // ── Auth state change ─────────────────────────────────────────────────────
-  async onAuthStateChanged(user) {
-    state.currentUser = user;
-
-    if (user) {
-      state.isAdmin = await isCurrentUserAdmin();
-      this.navigate('canvas');
-    } else {
-      state.isAdmin = false;
-      this._shellBuilt = false;
-      this._showLogin();
-    }
   }
 }
 
@@ -256,10 +183,7 @@ function bootstrap() {
   const router = new Router(appEl);
   router.init();
 
-  // Firebase Auth listener — drives all routing
-  initAuth(async (user) => {
-    await router.onAuthStateChanged(user);
-  });
+
 
   console.info('%c DripRig v0.2 ', 'background:#ffb800;color:#000;font-weight:bold;padding:2px 6px;border-radius:2px;');
 }

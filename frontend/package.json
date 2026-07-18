@@ -12,7 +12,6 @@
     "vite": "^5.4.0"
   },
   "dependencies": {
-    "firebase": "^12.16.0",
     "particles.js": "^2.0.0"
   }
 }

@@ -103,22 +103,25 @@ _VTON_MODELS = [
     ("sm4ll-VTON",  _try_sm4ll_vton),    # fallback
 ]
 
-# Keywords that indicate a recoverable quota/capacity error → skip to next model
+# Keywords that indicate a recoverable quota/capacity error → try fallback model
+# NOTE: Keep these specific — broad words like "error" match everything and break logic
 _QUOTA_KEYWORDS = (
     "zerogpu", "quota", "exceeded", "rate limit",
-    "too many", "try again", "unavailable", "capacity", "error"
+    "too many requests", "try again", "unavailable", "capacity",
+    "service unavailable", "429", "503",
 )
 
 
-def generate_ai_tryon(slots: dict) -> tuple[str, int]:
+def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
     """
     2-slot UI pipeline:
       - slots['person']  → full-body photo of the person
       - slots['outfit']  → photo of the outfit to try on
+      - model            → "fast" (sm4ll-VTON) | "quality" (WeShopAI)
 
-    Tries each model in _VTON_MODELS in order. If a model hits a quota /
-    capacity error it is skipped and the next one is tried automatically.
-    Falls back to a MOCK image only when all models fail.
+    Runs the user-selected model first. If it fails due to quota/capacity,
+    falls back to the other model. Falls back to a MOCK image only when
+    both models fail.
     """
     ensure_dirs()
     start = time.time()
@@ -140,11 +143,21 @@ def generate_ai_tryon(slots: dict) -> tuple[str, int]:
     if not garment_path.exists():
         raise ValueError(f"Outfit file not found: {outfit_filename}")
 
-    logger.info(f"AI Try-on | person={person_filename}  outfit={outfit_filename}")
+    # ── 2. Build ordered model list based on user selection ──────────────────
+    all_models = {
+        "fast":    ("sm4ll-VTON",  _try_sm4ll_vton),
+        "quality": ("WeShopAI",    _try_weshop_vton),
+    }
+    # Put chosen model first, the other as fallback
+    primary = all_models.get(model, all_models["fast"])
+    fallback = all_models["quality"] if model == "fast" else all_models["fast"]
+    ordered_models = [primary, fallback]
 
-    # ── 2. Model cascade — try each model in order ───────────────────────────
+    logger.info(f"AI Try-on | model={model} | person={person_filename}  outfit={outfit_filename}")
+
+    # ── 3. Try models in order ───────────────────────────────────────────────
     last_error = None
-    for model_name, adapter_fn in _VTON_MODELS:
+    for model_name, adapter_fn in ordered_models:
         try:
             generated_path = adapter_fn(person_path, garment_path)
 
@@ -154,7 +167,7 @@ def generate_ai_tryon(slots: dict) -> tuple[str, int]:
 
             elapsed_ms = int((time.time() - start) * 1000)
             logger.info(f"✓ {model_name} succeeded → {result_filename} ({elapsed_ms / 1000:.1f}s)")
-            return result_filename, elapsed_ms
+            return result_filename, elapsed_ms, model_name
 
         except Exception as e:
             error_msg = str(e).lower()
@@ -163,11 +176,10 @@ def generate_ai_tryon(slots: dict) -> tuple[str, int]:
             last_error = e
 
             if not is_recoverable:
-                # Hard error (bad input, auth, etc.) — no point trying other models
                 raise RuntimeError(f"AI generation failed ({model_name}): {e}")
-            # Recoverable → continue to next model
+            # Recoverable → try fallback
 
-    # ── 3. All models exhausted — return MOCK image ──────────────────────────
+    # ── 4. All models exhausted — return MOCK image ──────────────────────────
     logger.warning(f"All VTON models failed — returning MOCK image. Last error: {last_error}")
     time.sleep(2)
 
@@ -185,7 +197,7 @@ def generate_ai_tryon(slots: dict) -> tuple[str, int]:
     mock_img.save(mock_path, "JPEG", quality=85)
 
     elapsed_ms = int((time.time() - start) * 1000)
-    return mock_filename, elapsed_ms
+    return mock_filename, elapsed_ms, "mock"
 
 
 

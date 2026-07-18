@@ -5,7 +5,7 @@
 import { SlotComponent } from '../components/slot.js';
 import { initParticles } from '../components/particles.js';
 import { showToast } from '../main.js';
-import { authFetch } from '../services/firebase.js';
+
 
 // Slot configuration
 const SLOT_CONFIGS = {
@@ -28,6 +28,7 @@ export class CanvasPage {
     this.filledCount = 0;
     this.el = null;
     this._rigId = this._generateRigId();
+    this.selectedModel = 'fast'; // 'fast' | 'quality'
   }
 
   _generateRigId() {
@@ -125,6 +126,33 @@ export class CanvasPage {
     `;
     page.appendChild(tracker);
 
+    // Model selector
+    const modelWrap = document.createElement('div');
+    modelWrap.className = 'model-selector slide-up delay-350';
+    modelWrap.innerHTML = `
+      <span class="model-selector__label">Engine</span>
+      <div class="model-selector__toggle" id="model-toggle">
+        <button class="model-selector__btn model-selector__btn--active" data-model="fast" id="btn-model-fast">
+          <span class="material-symbols-outlined">bolt</span>
+          Fast
+        </button>
+        <button class="model-selector__btn" data-model="quality" id="btn-model-quality">
+          <span class="material-symbols-outlined">auto_awesome</span>
+          Quality
+        </button>
+      </div>
+    `;
+    page.appendChild(modelWrap);
+
+    modelWrap.querySelectorAll('.model-selector__btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.selectedModel = btn.dataset.model;
+        modelWrap.querySelectorAll('.model-selector__btn').forEach(b =>
+          b.classList.toggle('model-selector__btn--active', b === btn)
+        );
+      });
+    });
+
     // CTA
     const ctaWrap = document.createElement('div');
     ctaWrap.className = 'cta-wrap slide-up delay-400';
@@ -197,28 +225,41 @@ export class CanvasPage {
     const payload = {
       person: personFilename,
       outfit: outfitFilename,
+      model: this.selectedModel,
     };
 
     this._showGeneratingOverlay(true);
 
     try {
-      const res = await authFetch('/api/generate', {
+      const response = await fetch(`/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: 'Generation failed.' }));
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ detail: 'Generation failed.' }));
         throw new Error(err.detail || 'Generation failed.');
       }
 
-      const data = await res.json();
+      const data = await response.json();
       this._showGeneratingOverlay(false);
+
+      // Map model keys to display names
+      const MODEL_NAMES = { fast: 'Fast (sm4ll-VTON)', quality: 'Quality (WeShopAI)', mock: 'Mock' };
+      const requestedName = MODEL_NAMES[this.selectedModel] || this.selectedModel;
+      const usedName = MODEL_NAMES[data.model_used] || data.model_used;
+
+      if (data.model_used === 'mock') {
+        showToast('⚠️ All engines are busy — showing placeholder. Try again later!', 'error');
+      } else if (data.model_used && data.model_used.toLowerCase() !== this.selectedModel) {
+        showToast(`⚡ ${requestedName} was unavailable — switched to ${usedName} automatically.`, 'info');
+      }
+
       this.onGenerateResult(data);
     } catch (err) {
       this._showGeneratingOverlay(false);
-      showToast(err.message || 'Generation failed. Please try again.', 'error');
+      showToast(`Something went wrong — try a different engine! (${err.message || 'Generation failed'})`, 'error');
     }
   }
 

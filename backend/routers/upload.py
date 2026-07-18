@@ -7,8 +7,6 @@ from fastapi import APIRouter, File, UploadFile, HTTPException, Depends
 
 from backend.models.schemas import UploadResponse
 from backend.services.image_service import validate_and_save
-from backend.services.db_service import record_upload
-from backend.middleware.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -66,8 +64,6 @@ async def upload_image(
         logger.exception("Failed to process upload")
         raise HTTPException(status_code=500, detail="Failed to process image. Please try again.")
 
-    # Record upload in Firestore (non-fatal)
-    # record_upload(uid=user["uid"], slot=slot, filename=meta["filename"])
 
     return UploadResponse(
         slot=slot,

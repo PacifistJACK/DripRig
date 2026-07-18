@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from backend.routers import upload, tryon, admin
+from backend.routers import upload, tryon
 from backend.services.image_service import ensure_dirs
 
 from dotenv import load_dotenv
@@ -59,7 +59,6 @@ app.mount("/results", StaticFiles(directory=str(RESULTS_DIR)), name="results")
 # Include routers
 app.include_router(upload.router)
 app.include_router(tryon.router)
-app.include_router(admin.router)
 
 
 @app.get("/api/health")

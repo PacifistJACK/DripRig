@@ -16,12 +16,14 @@ class GenerateRequest(BaseModel):
     bottom: Optional[str] = None
     shoes: Optional[str] = None
     person: Optional[str] = None
+    model: Optional[str] = "fast"  # "fast" = sm4ll-VTON | "quality" = WeShopAI
 
 
 class GenerateResponse(BaseModel):
     result_url: str
     processing_time_ms: int
     slots_used: list[str]
+    model_used: str = "unknown"
 
 
 class ErrorResponse(BaseModel):

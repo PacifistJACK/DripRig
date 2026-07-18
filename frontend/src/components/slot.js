@@ -4,7 +4,7 @@
  * Manages one clothing slot: empty → uploading → loaded states.
  * Handles click-to-upload, drag-and-drop, remove button.
  */
-import { authFetch } from '../services/firebase.js';
+
 
 
 export class SlotComponent {
@@ -192,17 +192,17 @@ export class SlotComponent {
     formData.append('file', file);
 
     try {
-      const res = await authFetch(`/api/upload/${this.slotKey}`, {
+      const response = await fetch(`/api/upload/${this.slotKey}`, {
         method: 'POST',
         body: formData,
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: 'Upload failed.' }));
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ detail: 'Upload failed.' }));
         throw new Error(err.detail || 'Upload failed.');
       }
 
-      const data = await res.json();
+      const data = await response.json();
       this.filename = data.filename;
       this.url = data.url;
 
@@ -217,7 +217,7 @@ export class SlotComponent {
   async _handleRemove() {
     if (this.filename) {
       // Fire-and-forget delete
-      authFetch(`/api/upload/${this.slotKey}/${this.filename}`, { method: 'DELETE' }).catch(() => { });
+      fetch(`/api/upload/${this.slotKey}/${this.filename}`, { method: 'DELETE' }).catch(() => { });
     }
     this._renderEmptyState();
     this.onRemove(this.slotKey);
