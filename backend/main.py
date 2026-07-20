@@ -2,6 +2,7 @@
 DripRig — FastAPI Application Entry Point
 """
 import logging
+import os
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -32,20 +33,38 @@ app = FastAPI(
     redoc_url="/api/redoc",
 )
 
-# CORS — allow Vite dev server and production origin
+# ── CORS ──────────────────────────────────────────────────────────────────────
+# Always allow local dev origins.
+_dev_origins = [
+    "http://localhost:5173",
+    "http://localhost:4173",   # Vite preview
+    "http://127.0.0.1:5173",
+]
+
+# Pull extra origins from env (comma-separated); set in Azure App Settings as ALLOWED_ORIGINS
+_env_origins: list[str] = [
+    o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()
+]
+
+# Azure injects WEBSITE_HOSTNAME automatically — always trust it
+_azure_hostname = os.environ.get("WEBSITE_HOSTNAME", "")
+_azure_origins: list[str] = (
+    [f"https://{_azure_hostname}", f"http://{_azure_hostname}"]
+    if _azure_hostname else []
+)
+
+allowed_origins = list(dict.fromkeys(_dev_origins + _env_origins + _azure_origins))
+logger.info(f"CORS allowed origins: {allowed_origins}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:4173",  # Vite preview
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Mount static directories for serving uploaded/result images
+# ── Static file mounts ────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).parent
 UPLOADS_DIR = BASE_DIR / "uploads"
 RESULTS_DIR = BASE_DIR / "results"
@@ -63,11 +82,16 @@ app.include_router(tryon.router)
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "ok", "service": "DripRig API", "version": "0.1.0"}
+    return {
+        "status": "ok",
+        "service": "DripRig API",
+        "version": "0.1.0",
+        "hostname": _azure_hostname or "local",
+    }
+
 
 STATIC_DIR = BASE_DIR / "static"
 STATIC_DIR.mkdir(exist_ok=True)
 
-# Mount the static directory for the Vite frontend at the root path
-# This must be the last route registered.
+# Mount the Vite-built frontend at root — MUST be the last mount registered.
 app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")

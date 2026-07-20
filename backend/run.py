@@ -7,6 +7,7 @@ if __name__ == "__main__":
     parent_dir = str(Path(__file__).resolve().parent.parent)
     if parent_dir not in sys.path:
         sys.path.insert(0, parent_dir)
-        
+
     print("Starting DripRig Backend Server...")
-    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=True)
+    # host="0.0.0.0" is required for Azure App Service (and any containerized env)
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)

@@ -1,12 +1,12 @@
 """
 DripRig — Upload Router
-Handles image uploads for each clothing slot.
+Handles image uploads: saves locally, uploads to Firebase, returns Firebase URL.
 """
 import logging
-from fastapi import APIRouter, File, UploadFile, HTTPException, Depends
+from fastapi import APIRouter, File, UploadFile, HTTPException
 
 from backend.models.schemas import UploadResponse
-from backend.services.image_service import validate_and_save
+from backend.services.image_service import validate_and_save, upload_upload_to_firebase
 
 logger = logging.getLogger(__name__)
 
@@ -23,19 +23,17 @@ async def upload_image(
 ):
     """
     Upload an image for a specific clothing slot.
-    
+    Saves locally, uploads to Firebase Storage, returns Firebase URL.
     Slots: person, outfit (or top, bottom, shoes for legacy)
     Accepted formats: JPEG, PNG, WEBP
     Max size: 20MB
     """
-    # Validate slot name
     if slot not in VALID_SLOTS:
         raise HTTPException(
             status_code=422,
             detail=f"Invalid slot '{slot}'. Must be one of: {', '.join(sorted(VALID_SLOTS))}",
         )
 
-    # Validate content type
     content_type = file.content_type or ""
     if content_type not in {"image/jpeg", "image/png", "image/webp"}:
         raise HTTPException(
@@ -43,10 +41,8 @@ async def upload_image(
             detail="Unsupported file type. Please upload a JPEG, PNG, or WEBP image.",
         )
 
-    # Read file bytes
     file_bytes = await file.read()
 
-    # Check file size
     if len(file_bytes) > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=413,
@@ -64,31 +60,16 @@ async def upload_image(
         logger.exception("Failed to process upload")
         raise HTTPException(status_code=500, detail="Failed to process image. Please try again.")
 
+    # Upload to Firebase Storage and get a public URL
+    from pathlib import Path
+    firebase_url = upload_upload_to_firebase(
+        Path(meta["path"]), meta["filename"], folder="uploads"
+    )
 
     return UploadResponse(
         slot=slot,
-        url=f"/uploads/{meta['filename']}",
+        url=firebase_url,
         filename=meta["filename"],
         width=meta["width"],
         height=meta["height"],
     )
-
-
-@router.delete("/upload/{slot}/{filename}")
-async def delete_upload(slot: str, filename: str):
-    """Remove an uploaded image from a slot."""
-    from pathlib import Path
-    from backend.services.image_service import UPLOAD_DIR
-
-    if slot not in VALID_SLOTS:
-        raise HTTPException(status_code=422, detail=f"Invalid slot '{slot}'.")
-
-    # Security: ensure filename belongs to this slot and has no path traversal
-    if not filename.startswith(f"{slot}_") or "/" in filename or "\\" in filename:
-        raise HTTPException(status_code=400, detail="Invalid filename.")
-
-    file_path = UPLOAD_DIR / filename
-    if file_path.exists():
-        file_path.unlink()
-
-    return {"deleted": filename}

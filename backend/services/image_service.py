@@ -7,15 +7,70 @@ import shutil
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 from dotenv import load_dotenv
+import pyrebase
 
 load_dotenv()
 
+# ── Azure-safe paths ──────────────────────────────────────────────────────────
+# On Azure App Service, /home is the only persistent mount.
+# Locally we fall back to the classic backend/uploads and backend/results dirs.
+_AZURE_DATA = os.environ.get("AZURE_DATA_DIR", "")
+if _AZURE_DATA:
+    _BASE_DATA = Path(_AZURE_DATA)
+else:
+    _azure_home = os.environ.get("HOME", "")
+    if _azure_home and Path(_azure_home).exists() and os.environ.get("WEBSITE_HOSTNAME"):
+        # Running on Azure — use /home/data for persistence
+        _BASE_DATA = Path(_azure_home) / "data"
+    else:
+        # Local dev — use backend/uploads and backend/results as before
+        _BASE_DATA = Path(__file__).parent.parent
+
+firebaseConfig = {
+    "apiKey": "AIzaSyBzfyOiXhCbqV3Qw-P6srvwWqt7OG7xX5k",
+    "authDomain": "driprig-383be.firebaseapp.com",
+    "projectId": "driprig-383be",
+    "storageBucket": "driprig-383be.firebasestorage.app",
+    "messagingSenderId": "269498335034",
+    "appId": "1:269498335034:web:a17aa8bbd393c79e3eda03",
+    "measurementId": "G-W2568LWR7F",
+    "databaseURL": ""
+}
+firebase = pyrebase.initialize_app(firebaseConfig)
+storage = firebase.storage()
+
 logger = logging.getLogger(__name__)
+
+
+def upload_to_firebase(local_path: Path, filename: str) -> str:
+    """Upload result image to Firebase Storage under results/ folder."""
+    try:
+        firebase_path = f"results/{filename}"
+        storage.child(firebase_path).put(str(local_path))
+        url = storage.child(firebase_path).get_url(None)
+        logger.info(f"Uploaded to Firebase: {firebase_path}")
+        return url
+    except Exception as e:
+        logger.error(f"Firebase upload failed: {e}")
+        return f"/results/{filename}"
+
+
+def upload_upload_to_firebase(local_path: Path, filename: str, folder: str = "uploads") -> str:
+    """Upload a user-uploaded image to Firebase Storage under uploads/ folder."""
+    try:
+        firebase_path = f"{folder}/{filename}"
+        storage.child(firebase_path).put(str(local_path))
+        url = storage.child(firebase_path).get_url(None)
+        logger.info(f"Uploaded to Firebase: {firebase_path}")
+        return url
+    except Exception as e:
+        logger.error(f"Firebase upload (uploads) failed: {e}")
+        return f"/{folder}/{filename}"
 
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_DIMENSION = 1024
-UPLOAD_DIR = Path(__file__).parent.parent / "uploads"
-RESULTS_DIR = Path(__file__).parent.parent / "results"
+UPLOAD_DIR = _BASE_DATA / "uploads"
+RESULTS_DIR = _BASE_DATA / "results"
 
 def ensure_dirs():
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -127,21 +182,40 @@ def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
     start = time.time()
 
     # ── 1. Resolve slots ────────────────────────────────────────────────────
-    outfit_filename = slots.get("outfit") or slots.get("top")
-    person_filename = slots.get("person")
+    outfit_url = slots.get("outfit") or slots.get("top")
+    person_url = slots.get("person")
 
-    if not person_filename:
+    if not person_url:
         raise ValueError("A person photo is required.")
-    if not outfit_filename:
+    if not outfit_url:
         raise ValueError("An outfit image is required.")
 
-    person_path  = UPLOAD_DIR / person_filename
-    garment_path = UPLOAD_DIR / outfit_filename
+    import requests
 
-    if not person_path.exists():
-        raise ValueError(f"Person file not found: {person_filename}")
-    if not garment_path.exists():
-        raise ValueError(f"Outfit file not found: {outfit_filename}")
+    def resolve_file(url_or_path: str, slot_name: str) -> Path:
+        """Accept either a Firebase/HTTP URL or a local /uploads/ path."""
+        if url_or_path.startswith("http://") or url_or_path.startswith("https://"):
+            # It's a real remote URL — download it
+            try:
+                resp = requests.get(url_or_path, timeout=30)
+                resp.raise_for_status()
+                filename = f"dl_{slot_name}_{int(time.time() * 1000)}.jpg"
+                path = UPLOAD_DIR / filename
+                with open(path, 'wb') as f:
+                    f.write(resp.content)
+                return path
+            except Exception as e:
+                raise ValueError(f"Failed to download {slot_name} image: {e}")
+        else:
+            # It's a local path like /uploads/person_xxx.jpg — resolve to disk
+            local_filename = url_or_path.lstrip("/").replace("uploads/", "").replace("results/", "")
+            local_path = UPLOAD_DIR / local_filename
+            if not local_path.exists():
+                raise ValueError(f"Local file not found for {slot_name}: {local_path}")
+            return local_path
+
+    person_path = resolve_file(person_url, "person")
+    garment_path = resolve_file(outfit_url, "outfit")
 
     # ── 2. Build ordered model list based on user selection ──────────────────
     all_models = {
@@ -153,7 +227,7 @@ def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
     fallback = all_models["quality"] if model == "fast" else all_models["fast"]
     ordered_models = [primary, fallback]
 
-    logger.info(f"AI Try-on | model={model} | person={person_filename}  outfit={outfit_filename}")
+    logger.info(f"AI Try-on | model={model} | person={person_url}  outfit={outfit_url}")
 
     # ── 3. Try models in order ───────────────────────────────────────────────
     last_error = None
@@ -164,10 +238,12 @@ def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
             result_filename = f"ai_{model_name.lower().replace('-','_')}_{int(time.time() * 1000)}_{uuid.uuid4().hex[:6]}.jpg"
             result_path = RESULTS_DIR / result_filename
             shutil.copy2(generated_path, result_path)
+            
+            result_url = upload_to_firebase(result_path, result_filename)
 
             elapsed_ms = int((time.time() - start) * 1000)
             logger.info(f"✓ {model_name} succeeded → {result_filename} ({elapsed_ms / 1000:.1f}s)")
-            return result_filename, elapsed_ms, model_name
+            return result_url, elapsed_ms, model_name
 
         except Exception as e:
             error_msg = str(e).lower()
@@ -195,9 +271,11 @@ def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
     mock_filename = f"ai_mock_{int(time.time() * 1000)}_{uuid.uuid4().hex[:6]}.jpg"
     mock_path = RESULTS_DIR / mock_filename
     mock_img.save(mock_path, "JPEG", quality=85)
+    
+    mock_url = upload_to_firebase(mock_path, mock_filename)
 
     elapsed_ms = int((time.time() - start) * 1000)
-    return mock_filename, elapsed_ms, "mock"
+    return mock_url, elapsed_ms, "mock"
 
 
 

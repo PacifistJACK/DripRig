@@ -203,11 +203,12 @@ export class SlotComponent {
       }
 
       const data = await response.json();
+      // data.url is now a Firebase Storage URL returned by the backend
       this.filename = data.filename;
       this.url = data.url;
 
       this._renderLoadedState(data.url);
-      this.onUpload(this.slotKey, data.filename, data.url);
+      this.onUpload(this.slotKey, data.url, data.url);
     } catch (err) {
       this._renderEmptyState();
       this.onError(err.message || 'Upload failed. Please try again.');
@@ -215,10 +216,8 @@ export class SlotComponent {
   }
 
   async _handleRemove() {
-    if (this.filename) {
-      // Fire-and-forget delete
-      fetch(`/api/upload/${this.slotKey}/${this.filename}`, { method: 'DELETE' }).catch(() => { });
-    }
+    this.filename = null;
+    this.url = null;
     this._renderEmptyState();
     this.onRemove(this.slotKey);
   }
@@ -230,7 +229,7 @@ export class SlotComponent {
 
   /** Returns the current filename (null if not uploaded) */
   getFilename() {
-    return this.filename;
+    return this.url;
   }
 
   /** Returns true if an image has been uploaded */

@@ -34,18 +34,11 @@ async def generate_outfit(
     if not slots["outfit"]:
         raise HTTPException(status_code=400, detail="An outfit image is required.")
 
-    # ── Verify files exist on disk ───────────────────────────────────────────
-    for slot_key, filename in slots.items():
-        if filename and not (UPLOAD_DIR / filename).exists():
-            raise HTTPException(
-                status_code=404,
-                detail=f"File not found for slot '{slot_key}'. Please re-upload.",
-            )
-
+    # Files will be downloaded in the service layer
     # ── Run AI generation (blocking → threadpool) ────────────────────────────
     try:
         loop = asyncio.get_running_loop()
-        result_filename, processing_time_ms, model_used = await loop.run_in_executor(
+        result_url, processing_time_ms, model_used = await loop.run_in_executor(
             None, generate_ai_tryon, slots, request.model or "fast"
         )
     except ValueError as e:
@@ -57,7 +50,7 @@ async def generate_outfit(
 
 
     return GenerateResponse(
-        result_url=f"/results/{result_filename}",
+        result_url=result_url,
         processing_time_ms=processing_time_ms,
         slots_used=[k for k, v in slots.items() if v],
         model_used=model_used,
