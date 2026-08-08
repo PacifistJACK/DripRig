@@ -120,21 +120,43 @@ async def validate_and_save(file_bytes: bytes, content_type: str, slot: str) -> 
 
 def _try_catvton(person_path: Path, garment_path: Path, cloth_type: str = "overall") -> Path:
     """Adapter for zhengchong/CatVTON (Fast model)."""
+    import tempfile
+    from PIL import Image
     from gradio_client import Client, handle_file
+
     logger.info(f"Trying fast model: zhengchong/CatVTON (cloth_type={cloth_type})")
     client = Client("zhengchong/CatVTON")
+
+    # Save clean RGB temporary PNG copies of inputs
+    person_img = Image.open(person_path).convert("RGB")
+    person_tmp = tempfile.mktemp(suffix=".png")
+    person_img.save(person_tmp)
+
+    garment_img = Image.open(garment_path).convert("RGB")
+    garment_tmp = tempfile.mktemp(suffix=".png")
+    garment_img.save(garment_tmp)
+
+    # CatVTON's handler expects a fully transparent RGBA mask in layers[0] for automasking
+    mask_tmp = tempfile.mktemp(suffix=".png")
+    Image.new("RGBA", person_img.size, (0, 0, 0, 0)).save(mask_tmp)
+
     result = client.predict(
-        person_image={"background": handle_file(str(person_path)), "layers": [], "composite": None},
-        cloth_image=handle_file(str(garment_path)),
-        cloth_type=cloth_type,    # defaults to 'overall'
+        person_image={
+            "background": handle_file(person_tmp),
+            "layers": [handle_file(mask_tmp)],
+            "composite": handle_file(person_tmp),
+        },
+        cloth_image=handle_file(garment_tmp),
+        cloth_type=cloth_type if cloth_type in ("upper", "lower", "overall") else "overall",
         num_inference_steps=30,
         guidance_scale=2.5,
         seed=42,
         show_type="result only",
         api_name="/submit_function"
     )
+
     if isinstance(result, dict):
-        return Path(result["path"])
+        return Path(result.get("path") or result.get("value") or str(result))
     if isinstance(result, (list, tuple)):
         r = result[0]
         return Path(r["path"] if isinstance(r, dict) else r)
@@ -206,9 +228,8 @@ def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
       - slots['outfit']  → photo of the outfit to try on
       - model            → "fast" (CatVTON) | "quality" (WeShopAI)
 
-    Runs the user-selected model first. If it fails due to quota/capacity,
-    falls back to the other models. Falls back to a MOCK image only when
-    all models fail.
+    Runs the user-selected model first. If it fails, falls back to other models cleanly.
+    Falls back to a MOCK image only when all models fail.
     """
     ensure_dirs()
     start = time.time()
@@ -266,7 +287,10 @@ def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
 
             result_filename = f"ai_{model_name.lower().replace('-','_')}_{int(time.time() * 1000)}_{uuid.uuid4().hex[:6]}.jpg"
             result_path = RESULTS_DIR / result_filename
-            shutil.copy2(generated_path, result_path)
+            
+            # Ensure generated output is saved cleanly as RGB JPEG (handles webp/png/rgba output)
+            res_img = Image.open(generated_path).convert("RGB")
+            res_img.save(result_path, "JPEG", quality=92)
             
             result_url = upload_to_firebase(result_path, result_filename)
 
@@ -275,14 +299,8 @@ def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
             return result_url, elapsed_ms, model_name
 
         except Exception as e:
-            error_msg = str(e).lower()
-            is_recoverable = any(k in error_msg for k in _QUOTA_KEYWORDS)
-            logger.warning(f"✗ {model_name} failed ({'quota/capacity' if is_recoverable else 'error'}): {e}")
+            logger.warning(f"✗ {model_name} failed: {e}")
             last_error = e
-
-            if not is_recoverable:
-                raise RuntimeError(f"AI generation failed ({model_name}): {e}")
-            # Recoverable → try fallback
 
     # ── 4. All models exhausted — return MOCK image ──────────────────────────
     logger.warning(f"All VTON models failed — returning MOCK image. Last error: {last_error}")
