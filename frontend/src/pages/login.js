@@ -48,8 +48,10 @@ export class LoginPage {
         }
       } catch (err) {
         console.error('[DripRig Login Error]', err);
-        if (err.code !== 'auth/popup-closed-by-user') {
-          showToast('Google Sign In failed. Please try again.', 'error');
+        if (err.code === 'auth/unauthorized-domain') {
+          showToast('Domain not authorized in Firebase Console! Please add domain in Authorized Domains.', 'error');
+        } else if (err.code !== 'auth/popup-closed-by-user') {
+          showToast(`Google Sign In error (${err.code || 'failed'})`, 'error');
         }
       } finally {
         btn.disabled = false;
