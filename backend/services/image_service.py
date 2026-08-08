@@ -33,7 +33,7 @@ try:
         "apiKey": "AIzaSyBzfyOiXhCbqV3Qw-P6srvwWqt7OG7xX5k",
         "authDomain": "driprig-383be.firebaseapp.com",
         "projectId": "driprig-383be",
-        "storageBucket": "driprig-383be.firebasestorage.app",
+        "storageBucket": "driprig-383be.appspot.com",
         "messagingSenderId": "269498335034",
         "appId": "1:269498335034:web:a17aa8bbd393c79e3eda03",
         "measurementId": "G-W2568LWR7F",
