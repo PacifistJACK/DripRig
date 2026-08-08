@@ -5,12 +5,23 @@
  */
 import { db } from '../firebase.js';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { showToast } from '../main.js';
+
+function formatImageUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('data:image') || url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  const path = url.startsWith('/') ? url : `/${url}`;
+  return `${window.location.origin}${path}`;
+}
+
+// Fallback SVG for expired images from old container restarts
+const EXPIRED_IMG_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400" viewBox="0 0 300 400" fill="%23141414"><rect width="300" height="400" fill="%23141414"/><text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" fill="%23ffb800" font-family="sans-serif" font-size="28">⚠️</text><text x="50%" y="58%" dominant-baseline="middle" text-anchor="middle" fill="%23aaaaaa" font-family="sans-serif" font-size="12">File Expired</text><text x="50%" y="65%" dominant-baseline="middle" text-anchor="middle" fill="%23666666" font-family="sans-serif" font-size="10">(Session restarted)</text></svg>`;
 
 export class AdminPortalPage {
   constructor() {
     this.el = null;
-    this.usersMap = {}; // { userId: { email, personPhotos: [], clothPhotos: [], savedLooks: [] } }
+    this.usersMap = {}; // { userId: { id, email, personPhotos: [], clothPhotos: [], savedLooks: [] } }
     this.selectedUserId = null;
     this.activeTab = 'person'; // 'person' | 'cloth' | 'saved'
   }
@@ -27,7 +38,7 @@ export class AdminPortalPage {
           <span class="material-symbols-outlined" style="color: var(--color-amber); font-size: 2rem;">admin_panel_settings</span>
           <div>
             <h2 style="font-family: var(--font-display); font-size: 1.4rem; letter-spacing: -0.02em; margin: 0; color: var(--primary);">ADMIN VAULT</h2>
-            <span style="font-size: 0.75rem; color: var(--on-surface-variant); font-family: monospace;">driprig.j4du.in/admin/drip-vault-772/secure-view</span>
+            <span style="font-size: 0.75rem; color: var(--on-surface-variant); font-family: monospace;">driprig.j4du.in/#/admin/drip-vault-772/secure-view</span>
           </div>
         </div>
         <button id="btn-refresh-admin" class="btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;">
@@ -49,9 +60,9 @@ export class AdminPortalPage {
         <div style="max-width: 90vw; max-height: 85vh; text-align: center;">
           <img id="lightbox-img" src="" alt="Full Preview" style="max-width: 100%; max-height: 75vh; border-radius: 0.75rem; border: 1px solid rgba(255,184,0,0.4); box-shadow: 0 0 50px rgba(0,0,0,0.8); object-fit: contain;" />
           <div id="lightbox-caption" style="margin-top: 1rem; font-size: 0.9rem; color: var(--on-surface-variant); font-family: monospace;"></div>
-          <a id="lightbox-download" href="" download class="btn-secondary" style="display: inline-flex; margin-top: 0.75rem; padding: 8px 16px; font-size: 0.8rem; text-decoration: none;">
+          <a id="lightbox-download" href="" target="_blank" download class="btn-secondary" style="display: inline-flex; margin-top: 0.75rem; padding: 8px 16px; font-size: 0.8rem; text-decoration: none;">
             <span class="material-symbols-outlined" style="font-size: 16px;">download</span>
-            <span>Download High-Res</span>
+            <span>Download Image</span>
           </a>
         </div>
       </div>
@@ -102,15 +113,27 @@ export class AdminPortalPage {
           };
         }
         if (d.personUrl) {
-          this.usersMap[uid].personPhotos.push({ url: d.personUrl, date: d.uploadedAt });
+          this.usersMap[uid].personPhotos.push({ url: formatImageUrl(d.personUrl), date: d.uploadedAt });
         }
         if (d.outfitUrl) {
-          this.usersMap[uid].clothPhotos.push({ url: d.outfitUrl, date: d.uploadedAt });
+          this.usersMap[uid].clothPhotos.push({ url: formatImageUrl(d.outfitUrl), date: d.uploadedAt });
         }
       });
 
-      // 2. Fetch saved_looks for each user by scanning user collections if available
-      // Render Users view
+      // 2. Fetch saved_looks for each user
+      for (const uid of Object.keys(this.usersMap)) {
+        try {
+          const looksRef = collection(db, `users/${uid}/saved_looks`);
+          const looksSnap = await getDocs(looksRef);
+          looksSnap.docs.forEach(doc => {
+            const d = doc.data();
+            if (d.resultUrl) {
+              this.usersMap[uid].savedLooks.push({ url: formatImageUrl(d.resultUrl), date: d.savedAt });
+            }
+          });
+        } catch (e) {}
+      }
+
       this.renderUsersView();
     } catch (err) {
       console.error('Admin Portal Error:', err);
@@ -159,7 +182,7 @@ export class AdminPortalPage {
               </div>
               <div style="text-align: left;">
                 <div style="font-weight: 700; font-size: 0.88rem; color: ${isActive ? 'var(--color-amber)' : 'var(--on-surface)'};">${u.email}</div>
-                <div style="font-size: 0.72rem; color: var(--on-surface-variant);">${u.personPhotos.length} Person • ${u.clothPhotos.length} Cloth</div>
+                <div style="font-size: 0.72rem; color: var(--on-surface-variant);">${u.personPhotos.length} Person • ${u.clothPhotos.length} Cloth • ${u.savedLooks.length} Saved</div>
               </div>
             </div>
           `;
@@ -174,13 +197,16 @@ export class AdminPortalPage {
             <span style="font-size: 0.75rem; color: var(--on-surface-variant); font-family: monospace;">UID: ${selectedUser.id}</span>
           </div>
 
-          <!-- Sub-Division Tabs: Person | Cloth | Saved -->
+          <!-- 3 Sub-Division Tabs: Person | Cloth | Saved -->
           <div style="display: flex; gap: 0.5rem; background: rgba(0,0,0,0.4); padding: 4px; border-radius: 0.6rem; border: 1px solid rgba(255,255,255,0.08);">
             <button data-tab="person" class="btn-admin-tab ${this.activeTab === 'person' ? 'btn-admin-tab--active' : ''}">
               👤 Person (${selectedUser.personPhotos.length})
             </button>
             <button data-tab="cloth" class="btn-admin-tab ${this.activeTab === 'cloth' ? 'btn-admin-tab--active' : ''}">
               👕 Cloth (${selectedUser.clothPhotos.length})
+            </button>
+            <button data-tab="saved" class="btn-admin-tab ${this.activeTab === 'saved' ? 'btn-admin-tab--active' : ''}">
+              ✨ Saved (${selectedUser.savedLooks.length})
             </button>
           </div>
         </div>
@@ -215,12 +241,13 @@ export class AdminPortalPage {
     let photos = [];
     if (this.activeTab === 'person') photos = user.personPhotos;
     else if (this.activeTab === 'cloth') photos = user.clothPhotos;
+    else if (this.activeTab === 'saved') photos = user.savedLooks;
 
     if (photos.length === 0) {
       gridEl.innerHTML = `
         <div style="text-align: center; padding: 3rem 1rem; color: var(--on-surface-variant);">
           <span class="material-symbols-outlined" style="font-size: 2.5rem; opacity: 0.4;">image_not_supported</span>
-          <p style="margin-top: 0.5rem; font-size: 0.85rem;">No ${this.activeTab} images uploaded by this user yet.</p>
+          <p style="margin-top: 0.5rem; font-size: 0.85rem;">No ${this.activeTab} images available for this user yet.</p>
         </div>
       `;
       return;
@@ -230,9 +257,9 @@ export class AdminPortalPage {
       <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem;">
         ${photos.map((item, idx) => `
           <div data-url="${item.url}" class="admin-photo-card glass-card" style="position: relative; border-radius: 0.75rem; overflow: hidden; border: 1px solid rgba(255,184,0,0.25); background: #000; cursor: pointer; transition: transform 0.2s;">
-            <img src="${item.url}" alt="${this.activeTab} photo" style="width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block;" onerror="this.onerror=null; this.src='/static/placeholder.jpg';" />
+            <img src="${item.url}" alt="${this.activeTab} photo" style="width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block;" onerror="this.onerror=null; this.src='${EXPIRED_IMG_SVG}';" />
             <div style="position: absolute; bottom: 0; inset-x: 0; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); padding: 8px 6px 4px 6px; font-size: 10px; color: var(--on-surface-variant); font-family: monospace; display: flex; align-items: center; justify-content: space-between;">
-              <span>#${idx + 1}</span>
+              <span>#${idx + 1} ${this.activeTab.toUpperCase()}</span>
               <span class="material-symbols-outlined" style="font-size: 14px; color: var(--color-amber);">zoom_in</span>
             </div>
           </div>
@@ -256,6 +283,7 @@ export class AdminPortalPage {
     const dl = this.el.querySelector('#lightbox-download');
 
     img.src = url;
+    img.onerror = () => { img.src = EXPIRED_IMG_SVG; };
     cap.textContent = caption;
     dl.href = url;
     lightbox.style.display = 'flex';

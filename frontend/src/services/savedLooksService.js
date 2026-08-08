@@ -1,7 +1,7 @@
 /**
  * DripRig — Firestore Saved Looks & Admin Upload Logger
- * Automatically formats full absolute HTTPS URLs (e.g. https://driprig.j4du.in/uploads/...)
- * so images can be clicked & viewed directly inside Firebase Console and load cleanly in the app.
+ * Encodes image files as Base64 Data Strings directly inside Firebase Cloud Firestore
+ * so images are PERMANENTLY stored in Google's cloud database with ZERO dependency on Render disk!
  */
 import { db, auth } from '../firebase.js';
 import { 
@@ -17,23 +17,49 @@ import {
 
 function toFullUrl(url) {
   if (!url) return null;
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('data:image') || url.startsWith('http://') || url.startsWith('https://')) return url;
   const path = url.startsWith('/') ? url : `/${url}`;
   return `${window.location.origin}${path}`;
 }
 
 /**
- * Admin Audit Logger — Automatically logs every uploaded person photo & outfit as full clickable URLs
+ * Converts an image URL (relative or HTTP) to a permanent Base64 Data String
+ */
+async function urlToBase64(url) {
+  if (!url) return null;
+  if (url.startsWith('data:image')) return url;
+  try {
+    const fullUrl = toFullUrl(url);
+    const response = await fetch(fullUrl);
+    if (!response.ok) return fullUrl;
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
+  } catch (e) {
+    return toFullUrl(url);
+  }
+}
+
+/**
+ * Admin Audit Logger — Permanently logs uploaded person photo & outfit as Base64 in Firestore
  */
 export async function logUploadForAdmin(personUrl, outfitUrl = null) {
   const user = auth.currentUser;
   try {
+    const [personB64, outfitB64] = await Promise.all([
+      urlToBase64(personUrl),
+      urlToBase64(outfitUrl),
+    ]);
+
     const adminRef = collection(db, 'admin_uploads');
     await addDoc(adminRef, {
       userId: user ? user.uid : 'anonymous',
       userEmail: user ? user.email : 'anonymous',
-      personUrl: toFullUrl(personUrl),
-      outfitUrl: toFullUrl(outfitUrl),
+      personUrl: personB64,
+      outfitUrl: outfitB64,
       uploadedAt: serverTimestamp(),
     });
   } catch (err) {
@@ -42,7 +68,7 @@ export async function logUploadForAdmin(personUrl, outfitUrl = null) {
 }
 
 /**
- * User Saved Looks — Saved ONLY when user clicks "Save Look"
+ * User Saved Looks — Permanently stores Base64 image in Firestore when user clicks "Save Look"
  */
 export async function saveLookToFirestore(resultData) {
   const user = auth.currentUser;
@@ -50,13 +76,19 @@ export async function saveLookToFirestore(resultData) {
     throw new Error("User must be logged in to save looks.");
   }
 
+  const [resultB64, personB64, outfitB64] = await Promise.all([
+    urlToBase64(resultData.result_url),
+    urlToBase64(resultData.person_url),
+    urlToBase64(resultData.outfit_url),
+  ]);
+
   const looksRef = collection(db, `users/${user.uid}/saved_looks`);
   const newLook = {
     userId: user.uid,
     userEmail: user.email,
-    personUrl: toFullUrl(resultData.person_url),
-    outfitUrl: toFullUrl(resultData.outfit_url),
-    resultUrl: toFullUrl(resultData.result_url),
+    personUrl: personB64,
+    outfitUrl: outfitB64,
+    resultUrl: resultB64,
     modelUsed: resultData.model_used || 'VTON',
     processingTimeMs: resultData.processing_time_ms || 0,
     savedAt: serverTimestamp(),
@@ -67,7 +99,7 @@ export async function saveLookToFirestore(resultData) {
 }
 
 /**
- * Retrieves saved looks for normal user with full absolute URLs
+ * Retrieves permanent saved looks for normal user from Firestore
  */
 export async function getUserSavedLooks() {
   const user = auth.currentUser;
@@ -77,16 +109,7 @@ export async function getUserSavedLooks() {
     const looksRef = collection(db, `users/${user.uid}/saved_looks`);
     const q = query(looksRef, orderBy('savedAt', 'desc'));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(d => {
-      const data = d.data();
-      return { 
-        id: d.id, 
-        ...data,
-        resultUrl: toFullUrl(data.resultUrl),
-        personUrl: toFullUrl(data.personUrl),
-        outfitUrl: toFullUrl(data.outfitUrl),
-      };
-    });
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (err) {
     console.error('Error fetching saved looks:', err);
     return [];
@@ -94,7 +117,7 @@ export async function getUserSavedLooks() {
 }
 
 /**
- * Deletes a saved look from user's collection
+ * Deletes a saved look document from user's Firestore collection
  */
 export async function deleteSavedLook(lookId) {
   const user = auth.currentUser;
