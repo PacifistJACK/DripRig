@@ -169,8 +169,15 @@ class Router {
       this.currentPageEl = resultPage.render(data || state.resultData);
       this.contentEl.appendChild(this.currentPageEl);
 
+    } else if (page === 'admin-vault') {
+      import('./pages/adminPortal.js').then(({ AdminPortalPage }) => {
+        const adminPage = new AdminPortalPage();
+        this.currentPageEl = adminPage.render();
+        this.contentEl.appendChild(this.currentPageEl);
+      });
     }
   }
+
 
   // ── User menu (Profile & Sign Out Dropdown) ────────────────────────────────
   _showUserMenu() {
@@ -255,17 +262,30 @@ function bootstrap() {
 
   const router = new Router(appEl);
 
-  // Subscribe to Firebase Auth state changes
-  onAuthStateChanged(auth, (user) => {
-    state.user = user;
-    state.authInitialized = true;
-    router.updateAuthView();
-    if (user) {
-      console.info(`[DripRig Auth] User signed in: ${user.email}`);
-    } else {
-      console.info('[DripRig Auth] No user signed in');
-    }
-  });
+    // Subscribe to Firebase Auth state changes
+    onAuthStateChanged(auth, (user) => {
+      state.user = user;
+      state.authInitialized = true;
+      router.updateAuthView();
+
+      // Check if secret admin vault hash is present in URL
+      if (window.location.hash.includes('admin') || window.location.pathname.includes('admin')) {
+        router.navigate('admin-vault');
+      }
+
+      if (user) {
+        console.info(`[DripRig Auth] User signed in: ${user.email}`);
+      } else {
+        console.info('[DripRig Auth] No user signed in');
+      }
+    });
+
+    window.addEventListener('hashchange', () => {
+      if (window.location.hash.includes('admin')) {
+        router.navigate('admin-vault');
+      }
+    });
+
 
   console.info('%c DripRig v0.2 ', 'background:#ffb800;color:#000;font-weight:bold;padding:2px 6px;border-radius:2px;');
 }

@@ -2157,3 +2157,26 @@ img {
   font-size: 0.8rem;
 }
 
+/* Admin Portal Tabs */
+.btn-admin-tab {
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: 0.4rem;
+  border: none;
+  background: transparent;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-admin-tab:hover {
+  color: var(--on-surface);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.btn-admin-tab--active {
+  background: var(--color-amber) !important;
+  color: #000 !important;
+  box-shadow: 0 0 12px rgba(255, 184, 0, 0.4);
+}

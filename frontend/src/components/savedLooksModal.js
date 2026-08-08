@@ -54,16 +54,19 @@ export async function openSavedLooksModal() {
 
   gridEl.innerHTML = `
     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem;">
-      ${looks.map(look => `
+      ${looks.map(look => {
+        const imgSrc = look.resultUrl ? (look.resultUrl.startsWith('http') || look.resultUrl.startsWith('/') ? look.resultUrl : `/${look.resultUrl}`) : '';
+        return `
         <div class="glass-card" style="position: relative; border-radius: 0.75rem; overflow: hidden; border: 1px solid rgba(255,184,0,0.2); background: rgba(0,0,0,0.3);">
-          <img src="${look.resultUrl}" alt="Saved Look" style="width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block;" />
+          <img src="${imgSrc}" alt="Saved Look" style="width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block;" onerror="this.onerror=null; this.src='/static/placeholder.jpg';" />
           <button data-id="${look.id}" class="btn-delete-look" style="position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.6); color: #ff4444; border: none; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer;" title="Delete look">
             <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
           </button>
         </div>
-      `).join('')}
+      `}).join('')}
     </div>
   `;
+
 
 
 
