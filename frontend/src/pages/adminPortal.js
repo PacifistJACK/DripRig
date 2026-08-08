@@ -15,8 +15,8 @@ function formatImageUrl(url) {
   return `${window.location.origin}${path}`;
 }
 
-// Fallback SVG for expired images from old container restarts
-const EXPIRED_IMG_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400" viewBox="0 0 300 400" fill="%23141414"><rect width="300" height="400" fill="%23141414"/><text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" fill="%23ffb800" font-family="sans-serif" font-size="28">⚠️</text><text x="50%" y="58%" dominant-baseline="middle" text-anchor="middle" fill="%23aaaaaa" font-family="sans-serif" font-size="12">File Expired</text><text x="50%" y="65%" dominant-baseline="middle" text-anchor="middle" fill="%23666666" font-family="sans-serif" font-size="10">(Session restarted)</text></svg>`;
+// Sleek dark placeholder icon (zero text overlay clutter)
+const PLACEHOLDER_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400" viewBox="0 0 300 400"><rect width="300" height="400" fill="%23141414"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23333333" font-family="sans-serif" font-size="36">🖼️</text></svg>`;
 
 export class AdminPortalPage {
   constructor() {
@@ -113,14 +113,20 @@ export class AdminPortalPage {
           };
         }
         if (d.personUrl) {
-          this.usersMap[uid].personPhotos.push({ url: formatImageUrl(d.personUrl), date: d.uploadedAt });
+          const formattedUrl = formatImageUrl(d.personUrl);
+          if (formattedUrl && !this.usersMap[uid].personPhotos.some(p => p.url === formattedUrl)) {
+            this.usersMap[uid].personPhotos.push({ url: formattedUrl, date: d.uploadedAt });
+          }
         }
         if (d.outfitUrl) {
-          this.usersMap[uid].clothPhotos.push({ url: formatImageUrl(d.outfitUrl), date: d.uploadedAt });
+          const formattedUrl = formatImageUrl(d.outfitUrl);
+          if (formattedUrl && !this.usersMap[uid].clothPhotos.some(p => p.url === formattedUrl)) {
+            this.usersMap[uid].clothPhotos.push({ url: formattedUrl, date: d.uploadedAt });
+          }
         }
       });
 
-      // 2. Fetch saved_looks for each user
+      // 2. Fetch saved_looks for each user (deduplicated)
       for (const uid of Object.keys(this.usersMap)) {
         try {
           const looksRef = collection(db, `users/${uid}/saved_looks`);
@@ -128,11 +134,15 @@ export class AdminPortalPage {
           looksSnap.docs.forEach(doc => {
             const d = doc.data();
             if (d.resultUrl) {
-              this.usersMap[uid].savedLooks.push({ url: formatImageUrl(d.resultUrl), date: d.savedAt });
+              const formattedUrl = formatImageUrl(d.resultUrl);
+              if (formattedUrl && !this.usersMap[uid].savedLooks.some(p => p.url === formattedUrl)) {
+                this.usersMap[uid].savedLooks.push({ url: formattedUrl, date: d.savedAt });
+              }
             }
           });
         } catch (e) {}
       }
+
 
       this.renderUsersView();
     } catch (err) {
@@ -257,7 +267,7 @@ export class AdminPortalPage {
       <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem;">
         ${photos.map((item, idx) => `
           <div data-url="${item.url}" class="admin-photo-card glass-card" style="position: relative; border-radius: 0.75rem; overflow: hidden; border: 1px solid rgba(255,184,0,0.25); background: #000; cursor: pointer; transition: transform 0.2s;">
-            <img src="${item.url}" alt="${this.activeTab} photo" style="width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block;" onerror="this.onerror=null; this.src='${EXPIRED_IMG_SVG}';" />
+            <img class="admin-photo-img" src="${item.url}" alt="${this.activeTab} photo" style="width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block;" />
             <div style="position: absolute; bottom: 0; inset-x: 0; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); padding: 8px 6px 4px 6px; font-size: 10px; color: var(--on-surface-variant); font-family: monospace; display: flex; align-items: center; justify-content: space-between;">
               <span>#${idx + 1} ${this.activeTab.toUpperCase()}</span>
               <span class="material-symbols-outlined" style="font-size: 14px; color: var(--color-amber);">zoom_in</span>
@@ -266,6 +276,14 @@ export class AdminPortalPage {
         `).join('')}
       </div>
     `;
+
+    // Safely attach error handler in JS
+    gridEl.querySelectorAll('.admin-photo-img').forEach(img => {
+      img.addEventListener('error', () => {
+        img.onerror = null;
+        img.src = PLACEHOLDER_SVG;
+      });
+    });
 
     // Click image to open Lightbox
     gridEl.querySelectorAll('.admin-photo-card').forEach(card => {
@@ -283,7 +301,7 @@ export class AdminPortalPage {
     const dl = this.el.querySelector('#lightbox-download');
 
     img.src = url;
-    img.onerror = () => { img.src = EXPIRED_IMG_SVG; };
+    img.onerror = () => { img.src = PLACEHOLDER_SVG; };
     cap.textContent = caption;
     dl.href = url;
     lightbox.style.display = 'flex';
