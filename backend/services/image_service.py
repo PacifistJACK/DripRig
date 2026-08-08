@@ -243,11 +243,16 @@ def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
     if not outfit_url:
         raise ValueError("An outfit image is required.")
 
-    import requests
-
     def resolve_file(url_or_path: str, slot_name: str) -> Path:
         """Accept either a Firebase/HTTP URL or a local /uploads/ path."""
         if url_or_path.startswith("http://") or url_or_path.startswith("https://"):
+            # Check if it's pointing to our local server uploads or results
+            if "/uploads/" in url_or_path or "/results/" in url_or_path:
+                local_filename = url_or_path.split("/")[-1]
+                local_path = UPLOAD_DIR / local_filename
+                if local_path.exists():
+                    return local_path
+
             try:
                 resp = requests.get(url_or_path, timeout=30)
                 resp.raise_for_status()
@@ -257,12 +262,12 @@ def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
                     f.write(resp.content)
                 return path
             except Exception as e:
-                raise ValueError(f"Failed to download {slot_name} image: {e}")
+                raise ValueError(f"The uploaded {slot_name} image is no longer available on the server. Please re-upload your {slot_name} photo.")
         else:
             local_filename = url_or_path.lstrip("/").replace("uploads/", "").replace("results/", "")
             local_path = UPLOAD_DIR / local_filename
             if not local_path.exists():
-                raise ValueError(f"Local file not found for {slot_name}: {local_path}")
+                raise ValueError(f"The uploaded {slot_name} image is no longer available on the server. Please re-upload your {slot_name} photo.")
             return local_path
 
     person_path = resolve_file(person_url, "person")
