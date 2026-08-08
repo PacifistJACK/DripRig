@@ -1773,3 +1773,381 @@ img {
 
 .admin-error { color: #ff6b6b; }
 
+
+/* ============================================================
+   KEEP-ALIVE & PING SYSTEM STYLES
+   ============================================================ */
+.top-bar__center {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.top-bar__ping-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  padding: 0.2rem 0.6rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--on-surface);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.top-bar__ping-badge:hover {
+  background: rgba(255, 184, 0, 0.15);
+  border-color: rgba(255, 184, 0, 0.4);
+  transform: translateY(-1px);
+}
+
+.top-bar__ping-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.top-bar__ping-dot--online {
+  background: #00e676;
+  box-shadow: 0 0 8px #00e676;
+  animation: pulseGreen 2s infinite;
+}
+
+.top-bar__ping-dot--offline {
+  background: #ff5252;
+  box-shadow: 0 0 8px #ff5252;
+}
+
+.top-bar__ping-dot--idle {
+  background: #ffb800;
+  box-shadow: 0 0 8px #ffb800;
+  animation: pulseYellow 1.5s infinite;
+}
+
+@keyframes pulseGreen {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 230, 118, 0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(0, 230, 118, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 230, 118, 0); }
+}
+
+@keyframes pulseYellow {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 184, 0, 0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(255, 184, 0, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 184, 0, 0); }
+}
+
+/* Modal Overlay */
+.ping-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.ping-modal-content {
+  width: 100%;
+  max-width: 520px;
+  background: rgba(18, 18, 22, 0.95);
+  border: 1px solid rgba(255, 184, 0, 0.25);
+  border-radius: 1.25rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(255, 184, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+.ping-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ping-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--on-surface);
+
+  .ping-icon-pulse {
+    color: var(--color-amber);
+  }
+}
+
+.ping-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem;
+  border-radius: 0.5rem;
+  transition: background 0.2s, color 0.2s;
+}
+
+.ping-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--on-surface);
+}
+
+.ping-modal-body {
+  padding: 1.25rem 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Status Banner */
+.ping-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1rem 1.25rem;
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ping-status-banner--online {
+  background: rgba(0, 230, 118, 0.08);
+  border-color: rgba(0, 230, 118, 0.3);
+}
+
+.ping-status-banner--offline {
+  background: rgba(255, 82, 82, 0.08);
+  border-color: rgba(255, 82, 82, 0.3);
+}
+
+.ping-pulse-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ping-pulse-indicator--green {
+  background: #00e676;
+  box-shadow: 0 0 12px #00e676;
+  animation: pulseGreen 1.8s infinite;
+}
+
+.ping-pulse-indicator--red {
+  background: #ff5252;
+  box-shadow: 0 0 12px #ff5252;
+}
+
+.ping-status-text {
+  display: flex;
+  flex-direction: column;
+
+  strong {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--on-surface);
+  }
+
+  span {
+    font-size: 0.78rem;
+    color: var(--on-surface-variant);
+  }
+}
+
+/* Metric Grid */
+.ping-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.ping-metric-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 0.75rem;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.ping-metric-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--on-surface-variant);
+  margin-bottom: 0.25rem;
+}
+
+.ping-metric-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--color-amber);
+  font-family: var(--font-display);
+}
+
+/* Target info */
+.ping-info-card {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 0.75rem;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.ping-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+
+  span { color: var(--on-surface-variant); }
+  code {
+    font-family: monospace;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.3rem;
+    color: var(--color-cyan);
+    word-break: break-all;
+  }
+}
+
+/* Action Buttons */
+.ping-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.ping-action-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.ping-btn-primary {
+  background: linear-gradient(135deg, var(--color-amber), #ff9100);
+  color: #000;
+  box-shadow: 0 4px 15px rgba(255, 184, 0, 0.3);
+}
+
+.ping-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(255, 184, 0, 0.4);
+}
+
+.ping-btn-secondary {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--on-surface);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.ping-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Logs */
+.ping-logs-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ping-logs-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--on-surface-variant);
+  margin: 0;
+}
+
+.ping-logs-container {
+  max-height: 160px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0.75rem;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ping-log-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.75rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.4rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ping-log-time {
+  color: var(--on-surface-variant);
+  font-family: monospace;
+}
+
+.ping-log-badge {
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.25rem;
+  font-weight: 800;
+  font-size: 0.68rem;
+}
+
+.ping-log-badge--success {
+  background: rgba(0, 230, 118, 0.2);
+  color: #00e676;
+}
+
+.ping-log-badge--fail {
+  background: rgba(255, 82, 82, 0.2);
+  color: #ff5252;
+}
+
+.ping-log-msg {
+  flex: 1;
+  color: var(--on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ping-log-latency {
+  color: var(--color-cyan);
+  font-weight: 600;
+}
+
+.ping-logs-empty {
+  text-align: center;
+  padding: 1rem;
+  color: var(--on-surface-variant);
+  font-size: 0.8rem;
+}
+

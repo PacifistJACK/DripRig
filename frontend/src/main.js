@@ -163,6 +163,8 @@ class Router {
   }
 }
 
+import { pingService } from './services/pingService.js';
+
 // ============================================================
 // INIT
 // ============================================================
@@ -183,9 +185,10 @@ function bootstrap() {
   const router = new Router(appEl);
   router.init();
 
+  // Start keep-alive client service
+  pingService.start();
 
-
-  console.info('%c DripRig v0.2 ', 'background:#ffb800;color:#000;font-weight:bold;padding:2px 6px;border-radius:2px;');
+  console.info('%c DripRig v0.2 | Keep-Alive Active ', 'background:#ffb800;color:#000;font-weight:bold;padding:2px 6px;border-radius:2px;');
 }
 
 if (document.readyState === 'loading') {

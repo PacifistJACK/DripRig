@@ -9,8 +9,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from backend.routers import upload, tryon
+from contextlib import asynccontextmanager
+
+from backend.routers import upload, tryon, ping
 from backend.services.image_service import ensure_dirs
+from backend.services.keep_alive import keep_alive_service
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -25,12 +28,23 @@ logger = logging.getLogger(__name__)
 # Ensure storage dirs exist on startup
 ensure_dirs()
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Start keep-alive service task
+    keep_alive_service.start()
+    logger.info("Keep-alive service started.")
+    yield
+    # Shutdown: Stop keep-alive service
+    keep_alive_service.stop()
+    logger.info("Keep-alive service stopped.")
+
 app = FastAPI(
     title="DripRig API",
     description="Virtual Try-On Backend — Upload clothes, generate your rig.",
     version="0.1.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
+    lifespan=lifespan,
 )
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
@@ -78,6 +92,7 @@ app.mount("/results", StaticFiles(directory=str(RESULTS_DIR)), name="results")
 # Include routers
 app.include_router(upload.router)
 app.include_router(tryon.router)
+app.include_router(ping.router)
 
 
 @app.get("/api/health")
