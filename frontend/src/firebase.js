@@ -1,5 +1,13 @@
 import { initializeApp } from "firebase/app";
 import { getStorage } from "firebase/storage";
+import { getAnalytics, isSupported } from "firebase/analytics";
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signOut, 
+  onAuthStateChanged 
+} from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBzfyOiXhCbqV3Qw-P6srvwWqt7OG7xX5k",
@@ -11,6 +19,18 @@ const firebaseConfig = {
   measurementId: "G-W2568LWR7F"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase App
+export const app = initializeApp(firebaseConfig);
 export const storage = getStorage(app);
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
+
+export { signInWithPopup, signOut, onAuthStateChanged };
+
+// Safe Analytics initialization
+export let analytics = null;
+isSupported().then((supported) => {
+  if (supported) {
+    analytics = getAnalytics(app);
+  }
+}).catch(() => {});
