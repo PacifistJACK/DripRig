@@ -87,10 +87,25 @@ def ensure_dirs():
 
 
 async def validate_and_save(file_bytes: bytes, content_type: str, slot: str) -> dict:
-    """Save upload to disk."""
+    """Save upload to disk, de-duplicating by MD5 content hash."""
     ensure_dirs()
     if content_type not in ALLOWED_TYPES:
         raise ValueError(f"Invalid file type '{content_type}'. Allowed: JPEG, PNG, WEBP")
+
+    import hashlib
+    file_hash = hashlib.md5(file_bytes).hexdigest()[:12]
+    filename = f"{slot}_{file_hash}.jpg"
+    save_path = UPLOAD_DIR / filename
+
+    # De-duplication: Reuse existing file if identical bytes uploaded
+    if save_path.exists():
+        try:
+            with Image.open(save_path) as existing_img:
+                w, h = existing_img.size
+                logger.info(f"Duplicate upload detected for {slot}: reusing existing {filename}")
+                return {"filename": filename, "path": str(save_path), "width": w, "height": h}
+        except Exception:
+            pass
 
     img = Image.open(io.BytesIO(file_bytes))
     if img.mode in ("RGBA", "P"):
@@ -106,11 +121,10 @@ async def validate_and_save(file_bytes: bytes, content_type: str, slot: str) -> 
         img.thumbnail((MAX_DIMENSION, MAX_DIMENSION), Image.LANCZOS)
 
     width, height = img.size
-    filename = f"{slot}_{int(time.time() * 1000)}.jpg"
-    save_path = UPLOAD_DIR / filename
     img.save(save_path, "JPEG", quality=90, optimize=True)
     
     return {"filename": filename, "path": str(save_path), "width": width, "height": height}
+
 
 
 # ── VTON Model Adapters ──────────────────────────────────────────────────────

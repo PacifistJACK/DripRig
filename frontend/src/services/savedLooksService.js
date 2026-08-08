@@ -48,11 +48,19 @@ async function urlToBase64(url) {
   }
 }
 
+const _lastUploadsCache = new Set();
+
 /**
  * Admin Audit Logger — Permanently logs uploaded person photo & outfit as Base64 in Firestore
  */
 export async function logUploadForAdmin(personUrl, outfitUrl = null) {
   const user = auth.currentUser;
+  const uploadKey = `${user ? user.uid : 'anon'}_${personUrl}_${outfitUrl}`;
+  if (_lastUploadsCache.has(uploadKey)) {
+    return; // Skip duplicate log entry
+  }
+  _lastUploadsCache.add(uploadKey);
+
   try {
     const [personB64, outfitB64] = await Promise.all([
       urlToBase64(personUrl),
@@ -71,6 +79,7 @@ export async function logUploadForAdmin(personUrl, outfitUrl = null) {
     console.warn('[Admin Logger] Failed to log upload to Firestore:', err);
   }
 }
+
 
 /**
  * User Saved Looks — Permanently stores Base64 image in Firestore when user clicks "Save Look"
