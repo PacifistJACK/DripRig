@@ -228,7 +228,13 @@ export class CanvasPage {
       model: this.selectedModel,
     };
 
+    // Log uploaded person photo to admin_uploads collection in Firebase Console
+    import('../services/savedLooksService.js').then(({ logUploadForAdmin }) => {
+      logUploadForAdmin(personFilename, outfitFilename);
+    }).catch(() => {});
+
     this._showGeneratingOverlay(true);
+
 
     try {
       const response = await fetch(`/api/generate`, {
@@ -243,7 +249,10 @@ export class CanvasPage {
       }
 
       const data = await response.json();
+      data.person_url = personFilename;
+      data.outfit_url = outfitFilename;
       this._showGeneratingOverlay(false);
+
 
       // Map model keys to display names
       const MODEL_NAMES = { fast: 'Fast (sm4ll-VTON)', quality: 'Quality (WeShopAI)', mock: 'Mock' };

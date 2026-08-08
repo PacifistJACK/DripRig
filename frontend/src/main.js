@@ -101,9 +101,12 @@ class Router {
     // Header
     this.header = createHeader({
       onMenuClick: () => this._showUserMenu(),
-      onBookmarkClick: () => showToast('Saved looks coming soon!', 'info'),
+      onBookmarkClick: () => {
+        import('./components/savedLooksModal.js').then(({ openSavedLooksModal }) => openSavedLooksModal());
+      },
     });
     this.appEl.appendChild(this.header);
+
 
     // Main content area
     this.contentEl = document.createElement('main');
@@ -200,8 +203,9 @@ class Router {
 
     menu.querySelector('#btn-saved-looks')?.addEventListener('click', () => {
       menu.remove();
-      showToast('Saved looks coming soon!', 'info');
+      import('./components/savedLooksModal.js').then(({ openSavedLooksModal }) => openSavedLooksModal());
     });
+
 
     menu.querySelector('#btn-logout')?.addEventListener('click', async () => {
       menu.remove();
