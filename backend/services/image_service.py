@@ -26,24 +26,31 @@ else:
         # Local dev — use backend/uploads and backend/results as before
         _BASE_DATA = Path(__file__).parent.parent
 
-firebaseConfig = {
-    "apiKey": "AIzaSyBzfyOiXhCbqV3Qw-P6srvwWqt7OG7xX5k",
-    "authDomain": "driprig-383be.firebaseapp.com",
-    "projectId": "driprig-383be",
-    "storageBucket": "driprig-383be.firebasestorage.app",
-    "messagingSenderId": "269498335034",
-    "appId": "1:269498335034:web:a17aa8bbd393c79e3eda03",
-    "measurementId": "G-W2568LWR7F",
-    "databaseURL": ""
-}
-firebase = pyrebase.initialize_app(firebaseConfig)
-storage = firebase.storage()
+storage = None
+try:
+    import pyrebase
+    firebaseConfig = {
+        "apiKey": "AIzaSyBzfyOiXhCbqV3Qw-P6srvwWqt7OG7xX5k",
+        "authDomain": "driprig-383be.firebaseapp.com",
+        "projectId": "driprig-383be",
+        "storageBucket": "driprig-383be.firebasestorage.app",
+        "messagingSenderId": "269498335034",
+        "appId": "1:269498335034:web:a17aa8bbd393c79e3eda03",
+        "measurementId": "G-W2568LWR7F",
+        "databaseURL": ""
+    }
+    firebase = pyrebase.initialize_app(firebaseConfig)
+    storage = firebase.storage()
+except Exception as _fb_err:
+    logging.warning(f"Firebase Storage initialization bypassed: {_fb_err}")
 
 logger = logging.getLogger(__name__)
 
 
 def upload_to_firebase(local_path: Path, filename: str) -> str:
     """Upload result image to Firebase Storage under results/ folder."""
+    if storage is None:
+        return f"/results/{filename}"
     try:
         firebase_path = f"results/{filename}"
         storage.child(firebase_path).put(str(local_path))
@@ -57,6 +64,8 @@ def upload_to_firebase(local_path: Path, filename: str) -> str:
 
 def upload_upload_to_firebase(local_path: Path, filename: str, folder: str = "uploads") -> str:
     """Upload a user-uploaded image to Firebase Storage under uploads/ folder."""
+    if storage is None:
+        return f"/{folder}/{filename}"
     try:
         firebase_path = f"{folder}/{filename}"
         storage.child(firebase_path).put(str(local_path))

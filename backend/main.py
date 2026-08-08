@@ -60,14 +60,19 @@ _env_origins: list[str] = [
     o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()
 ]
 
-# Azure injects WEBSITE_HOSTNAME automatically — always trust it
+# Azure & Render hostnames injected automatically
 _azure_hostname = os.environ.get("WEBSITE_HOSTNAME", "")
 _azure_origins: list[str] = (
     [f"https://{_azure_hostname}", f"http://{_azure_hostname}"]
     if _azure_hostname else []
 )
 
-allowed_origins = list(dict.fromkeys(_dev_origins + _env_origins + _azure_origins))
+_render_url = os.environ.get("RENDER_EXTERNAL_URL", "")
+_render_origins: list[str] = (
+    [f"{_render_url}"] if _render_url else []
+)
+
+allowed_origins = list(dict.fromkeys(_dev_origins + _env_origins + _azure_origins + _render_origins))
 logger.info(f"CORS allowed origins: {allowed_origins}")
 
 app.add_middleware(
