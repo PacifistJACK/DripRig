@@ -118,10 +118,33 @@ async def validate_and_save(file_bytes: bytes, content_type: str, slot: str) -> 
 # to the generated result. They normalize the different API signatures so
 # the fallback chain above can call them all the same way.
 
+def _try_catvton(person_path: Path, garment_path: Path, cloth_type: str = "overall") -> Path:
+    """Adapter for zhengchong/CatVTON (Fast model)."""
+    from gradio_client import Client, handle_file
+    logger.info(f"Trying fast model: zhengchong/CatVTON (cloth_type={cloth_type})")
+    client = Client("zhengchong/CatVTON")
+    result = client.predict(
+        person_image={"background": handle_file(str(person_path)), "layers": [], "composite": None},
+        cloth_image=handle_file(str(garment_path)),
+        cloth_type=cloth_type,    # defaults to 'overall'
+        num_inference_steps=30,
+        guidance_scale=2.5,
+        seed=42,
+        show_type="result only",
+        api_name="/submit_function"
+    )
+    if isinstance(result, dict):
+        return Path(result["path"])
+    if isinstance(result, (list, tuple)):
+        r = result[0]
+        return Path(r["path"] if isinstance(r, dict) else r)
+    return Path(str(result))
+
+
 def _try_sm4ll_vton(person_path: Path, garment_path: Path) -> Path:
     """Adapter for sm4ll-VTON/sm4ll-VTON-Demo."""
     from gradio_client import Client, handle_file
-    logger.info("Trying model 1: sm4ll-VTON/sm4ll-VTON-Demo")
+    logger.info("Trying fallback model: sm4ll-VTON/sm4ll-VTON-Demo")
     client = Client("sm4ll-VTON/sm4ll-VTON-Demo")
     result = client.predict(
         base_img=handle_file(str(person_path)),
@@ -146,7 +169,7 @@ def _try_weshop_vton(person_path: Path, garment_path: Path) -> Path:
       background_image → person image
     """
     from gradio_client import Client, handle_file
-    logger.info("Trying model 1 (primary): WeShopAI/WeShopAI-Virtual-Try-On")
+    logger.info("Trying model (quality): WeShopAI/WeShopAI-Virtual-Try-On")
     client = Client("WeShopAI/WeShopAI-Virtual-Try-On")
     result = client.predict(
         main_image=handle_file(str(garment_path)),       # garment goes here
@@ -163,12 +186,12 @@ def _try_weshop_vton(person_path: Path, garment_path: Path) -> Path:
 
 # Priority-ordered list of model adapters — first one that succeeds wins
 _VTON_MODELS = [
-    ("WeShopAI",    _try_weshop_vton),   # primary — better quality
-    ("sm4ll-VTON",  _try_sm4ll_vton),    # fallback
+    ("CatVTON",     _try_catvton),
+    ("WeShopAI",    _try_weshop_vton),
+    ("sm4ll-VTON",  _try_sm4ll_vton),
 ]
 
 # Keywords that indicate a recoverable quota/capacity error → try fallback model
-# NOTE: Keep these specific — broad words like "error" match everything and break logic
 _QUOTA_KEYWORDS = (
     "zerogpu", "quota", "exceeded", "rate limit",
     "too many requests", "try again", "unavailable", "capacity",
@@ -181,11 +204,11 @@ def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
     2-slot UI pipeline:
       - slots['person']  → full-body photo of the person
       - slots['outfit']  → photo of the outfit to try on
-      - model            → "fast" (sm4ll-VTON) | "quality" (WeShopAI)
+      - model            → "fast" (CatVTON) | "quality" (WeShopAI)
 
     Runs the user-selected model first. If it fails due to quota/capacity,
-    falls back to the other model. Falls back to a MOCK image only when
-    both models fail.
+    falls back to the other models. Falls back to a MOCK image only when
+    all models fail.
     """
     ensure_dirs()
     start = time.time()
@@ -204,7 +227,6 @@ def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
     def resolve_file(url_or_path: str, slot_name: str) -> Path:
         """Accept either a Firebase/HTTP URL or a local /uploads/ path."""
         if url_or_path.startswith("http://") or url_or_path.startswith("https://"):
-            # It's a real remote URL — download it
             try:
                 resp = requests.get(url_or_path, timeout=30)
                 resp.raise_for_status()
@@ -216,7 +238,6 @@ def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
             except Exception as e:
                 raise ValueError(f"Failed to download {slot_name} image: {e}")
         else:
-            # It's a local path like /uploads/person_xxx.jpg — resolve to disk
             local_filename = url_or_path.lstrip("/").replace("uploads/", "").replace("results/", "")
             local_path = UPLOAD_DIR / local_filename
             if not local_path.exists():
@@ -228,13 +249,12 @@ def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
 
     # ── 2. Build ordered model list based on user selection ──────────────────
     all_models = {
-        "fast":    ("sm4ll-VTON",  _try_sm4ll_vton),
+        "fast":    ("CatVTON",     _try_catvton),
         "quality": ("WeShopAI",    _try_weshop_vton),
     }
-    # Put chosen model first, the other as fallback
     primary = all_models.get(model, all_models["fast"])
     fallback = all_models["quality"] if model == "fast" else all_models["fast"]
-    ordered_models = [primary, fallback]
+    ordered_models = [primary, fallback, ("sm4ll-VTON", _try_sm4ll_vton)]
 
     logger.info(f"AI Try-on | model={model} | person={person_url}  outfit={outfit_url}")
 
