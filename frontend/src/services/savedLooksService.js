@@ -18,8 +18,13 @@ import {
 function toFullUrl(url) {
   if (!url) return null;
   if (url.startsWith('data:image') || url.startsWith('http://') || url.startsWith('https://')) return url;
-  const path = url.startsWith('/') ? url : `/${url}`;
-  return `${window.location.origin}${path}`;
+  if (url.startsWith('/uploads/') || url.startsWith('/results/')) {
+    return `${window.location.origin}${url}`;
+  }
+  if (!url.startsWith('/')) {
+    return `${window.location.origin}/uploads/${url}`;
+  }
+  return `${window.location.origin}${url}`;
 }
 
 /**

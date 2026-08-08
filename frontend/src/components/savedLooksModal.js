@@ -55,7 +55,10 @@ export async function openSavedLooksModal() {
   gridEl.innerHTML = `
     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem;">
       ${looks.map(look => {
-        const imgSrc = look.resultUrl ? (look.resultUrl.startsWith('http') || look.resultUrl.startsWith('/') ? look.resultUrl : `/${look.resultUrl}`) : '';
+        let imgSrc = look.resultUrl || '';
+        if (imgSrc && !imgSrc.startsWith('data:image') && !imgSrc.startsWith('http://') && !imgSrc.startsWith('https://') && !imgSrc.startsWith('/')) {
+          imgSrc = `/${imgSrc}`;
+        }
         return `
         <div class="glass-card" style="position: relative; border-radius: 0.75rem; overflow: hidden; border: 1px solid rgba(255,184,0,0.2); background: rgba(0,0,0,0.3);">
           <img src="${imgSrc}" alt="Saved Look" style="width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block;" onerror="this.onerror=null; this.src='/static/placeholder.jpg';" />
