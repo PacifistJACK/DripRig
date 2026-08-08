@@ -11,7 +11,7 @@ import {
 
 const firebaseConfig = {
   apiKey: "AIzaSyBzfyOiXhCbqV3Qw-P6srvwWqt7OG7xX5k",
-  authDomain: "driprig-383be.firebaseapp.com",
+  authDomain: "driprig.j4du.in",
   projectId: "driprig-383be",
   storageBucket: "driprig-383be.firebasestorage.app",
   messagingSenderId: "269498335034",
