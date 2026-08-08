@@ -117,11 +117,19 @@ class Router {
     // Bottom nav
     this.bottomNav = new BottomNav({
       onNavigate: (page) => {
-        if (page === 'canvas') this.navigate('canvas');
-        else showToast(`${page.charAt(0).toUpperCase() + page.slice(1)} coming soon!`, 'info');
+        if (page === 'canvas') {
+          this.navigate('canvas');
+        } else if (page === 'saved') {
+          import('./components/savedLooksModal.js').then(({ openSavedLooksModal }) => openSavedLooksModal());
+        } else if (page === 'profile') {
+          this._showUserMenu();
+        } else {
+          showToast(`${page.charAt(0).toUpperCase() + page.slice(1)} coming soon!`, 'info');
+        }
       },
     });
     this.bottomNav.mount(this.appEl);
+
 
     this._shellBuilt = true;
   }
