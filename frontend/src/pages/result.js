@@ -60,17 +60,16 @@ export class ResultPage {
     `;
     page.appendChild(meta);
 
-    // Action buttons
+    // Action buttons (3-button action strip: Save Look | Download | Share)
     const actions = document.createElement('div');
     actions.className = 'result-actions slide-up delay-300';
 
-    // Save to Firebase button
+    // Save Look button (styled using native DripRig button design system)
     const saveBtn = document.createElement('button');
-    saveBtn.className = 'btn-primary';
+    saveBtn.className = 'btn-secondary';
     saveBtn.id = 'btn-save-firebase';
-    saveBtn.style.background = 'linear-gradient(135deg, var(--primary) 0%, #ff8c00 100%)';
     saveBtn.innerHTML = `
-      <span class="material-symbols-outlined">bookmark_add</span>
+      <span class="material-symbols-outlined" style="color: var(--color-amber);">bookmark_add</span>
       <span>Save Look</span>
     `;
     saveBtn.addEventListener('click', async () => {
@@ -80,7 +79,8 @@ export class ResultPage {
         const { showToast } = await import('../main.js');
         await saveLookToFirestore(data);
         showToast('Saved to your collection!', 'success');
-        saveBtn.innerHTML = `<span class="material-symbols-outlined">bookmark_added</span><span>Saved!</span>`;
+        saveBtn.innerHTML = `<span class="material-symbols-outlined" style="color: var(--color-cyan);">bookmark_added</span><span style="color: var(--color-cyan);">Saved!</span>`;
+        saveBtn.style.borderColor = 'var(--color-cyan)';
       } catch (err) {
         const { showToast } = await import('../main.js');
         showToast(err.message || 'Failed to save look.', 'error');
@@ -113,6 +113,7 @@ export class ResultPage {
     actions.appendChild(downloadBtn);
     actions.appendChild(shareBtn);
     page.appendChild(actions);
+
 
 
     // Try Again CTA
