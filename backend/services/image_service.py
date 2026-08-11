@@ -30,14 +30,14 @@ storage = None
 try:
     import pyrebase
     firebaseConfig = {
-        "apiKey": "AIzaSyBzfyOiXhCbqV3Qw-P6srvwWqt7OG7xX5k",
-        "authDomain": "driprig-383be.firebaseapp.com",
-        "projectId": "driprig-383be",
-        "storageBucket": "driprig-383be.appspot.com",
-        "messagingSenderId": "269498335034",
-        "appId": "1:269498335034:web:a17aa8bbd393c79e3eda03",
-        "measurementId": "G-W2568LWR7F",
-        "databaseURL": ""
+        "apiKey":            os.environ.get("FIREBASE_API_KEY", ""),
+        "authDomain":        os.environ.get("FIREBASE_AUTH_DOMAIN", ""),
+        "projectId":         os.environ.get("FIREBASE_PROJECT_ID", ""),
+        "storageBucket":     os.environ.get("FIREBASE_STORAGE_BUCKET", ""),
+        "messagingSenderId": os.environ.get("FIREBASE_MESSAGING_SENDER_ID", ""),
+        "appId":             os.environ.get("FIREBASE_APP_ID", ""),
+        "measurementId":     os.environ.get("FIREBASE_MEASUREMENT_ID", ""),
+        "databaseURL":       ""
     }
     firebase = pyrebase.initialize_app(firebaseConfig)
     storage = firebase.storage()

@@ -11,13 +11,13 @@ import {
 } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBzfyOiXhCbqV3Qw-P6srvwWqt7OG7xX5k",
-  authDomain: "auth.j4du.in",
-  projectId: "driprig-383be",
-  storageBucket: "driprig-383be.firebasestorage.app",
-  messagingSenderId: "269498335034",
-  appId: "1:269498335034:web:a17aa8bbd393c79e3eda03",
-  measurementId: "G-W2568LWR7F"
+  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId:             import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 // Initialize Firebase App & Services
