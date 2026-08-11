@@ -85,10 +85,30 @@ export class AdminPortalPage {
 
   async loadAdminData() {
     const area = this.el.querySelector('#admin-content-area');
+
+    // ── Admin Auth Gate ───────────────────────────────────────────────────────
+    const { auth } = await import('../firebase.js');
+    const user = auth.currentUser;
+    const ADMIN_EMAIL = 'utkarshsharma3600@gmail.com';
+
+    if (!user || user.email !== ADMIN_EMAIL) {
+      area.innerHTML = `
+        <div class="glass-card" style="text-align: center; padding: 4rem 2rem; border-radius: 1rem; border: 1px solid rgba(255,82,82,0.3); background: rgba(255,82,82,0.05);">
+          <span class="material-symbols-outlined" style="font-size: 4rem; color: #ff5252;">lock</span>
+          <h3 style="margin-top: 1rem; color: #ff5252; font-family: var(--font-display);">Access Denied</h3>
+          <p style="color: var(--on-surface-variant); font-size: 0.9rem; margin-top: 0.5rem;">
+            You are not authorized to view this page.
+          </p>
+        </div>
+      `;
+      return;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     area.innerHTML = `
       <div style="text-align: center; padding: 4rem 1rem; color: var(--on-surface-variant);">
         <span class="material-symbols-outlined spin" style="font-size: 2.5rem; color: var(--primary);">sync</span>
-        <p style="margin-top: 1rem;">Decrypting & loading user vaults from Firestore...</p>
+        <p style="margin-top: 1rem;">Decrypting &amp; loading user vaults from Firestore...</p>
       </div>
     `;
 
