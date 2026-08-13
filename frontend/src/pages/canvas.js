@@ -23,7 +23,7 @@ const SLOT_CONFIGS = {
 
 export class CanvasPage {
   constructor({ onGenerateResult } = {}) {
-    this.onGenerateResult = onGenerateResult || (() => {});
+    this.onGenerateResult = onGenerateResult || (() => { });
     this.slots = {};
     this.filledCount = 0;
     this.el = null;
@@ -92,7 +92,7 @@ export class CanvasPage {
         {
           onUpload: (slotKey, filename, url) => this._onSlotUpload(slotKey, filename, url),
           onRemove: (slotKey) => this._onSlotRemove(slotKey),
-          onError:  (msg) => showToast(msg, 'error'),
+          onError: (msg) => showToast(msg, 'error'),
         }
       );
       slot.mount(grid);
@@ -273,7 +273,7 @@ export class CanvasPage {
     // Log uploaded person photo to admin_uploads collection in Firebase Console
     import('../services/savedLooksService.js').then(({ logUploadForAdmin }) => {
       logUploadForAdmin(personFilename, outfitFilename);
-    }).catch(() => {});
+    }).catch(() => { });
 
     // ── Credit check before generation ───────────────────────────────────────
     const { hasEnoughCredits, deductCredits, creditCostFor, getCredits } =
@@ -341,13 +341,13 @@ export class CanvasPage {
 
     // ── CONFIG per model ──────────────────────────────────────────────────────
     const cfg = isFast ? {
-      duration:  30000,   // 30s to reach 90%
-      accentA:   '#ffb800',
-      accentB:   '#00d9e7',
-      badge:     '⚡ FAST ENGINE',
-      badgeClass:'overlay-badge--fast',
+      duration: 30000,   // 30s to reach 90%
+      accentA: '#ffb800',
+      accentB: '#00d9e7',
+      badge: '⚡ FAST ENGINE',
+      badgeClass: 'overlay-badge--fast',
       steps: [
-        { pct: 8,  msg: 'Booting fast engine…' },
+        { pct: 8, msg: 'Booting fast engine…' },
         { pct: 22, msg: 'Parsing your fit…' },
         { pct: 38, msg: 'Mapping body keypoints…' },
         { pct: 52, msg: 'Warping the garment…' },
@@ -357,13 +357,13 @@ export class CanvasPage {
         { pct: 90, msg: 'Waiting for the server…' },
       ],
     } : {
-      duration:  60000,   // 60s to reach 90%
-      accentA:   '#c855ff',
-      accentB:   '#ff0df5',
-      badge:     '✨ QUALITY ENGINE',
-      badgeClass:'overlay-badge--quality',
+      duration: 60000,   // 60s to reach 90%
+      accentA: '#c855ff',
+      accentB: '#ff0df5',
+      badge: '✨ QUALITY ENGINE',
+      badgeClass: 'overlay-badge--quality',
       steps: [
-        { pct: 5,  msg: 'Initialising quality model…' },
+        { pct: 5, msg: 'Initialising quality model…' },
         { pct: 15, msg: 'Analysing body geometry…' },
         { pct: 28, msg: 'Segmenting garment fabric…' },
         { pct: 42, msg: 'Running diffusion pass 1…' },
@@ -424,11 +424,11 @@ export class CanvasPage {
       }
 
       // ── Smart progress: animate to 90% over `duration`, then hold ──────
-      const ringFill   = overlay.querySelector('#go-ring-fill');
-      const pctEl      = overlay.querySelector('#go-pct');
-      const stepEl     = overlay.querySelector('#go-step');
-      const barEl      = overlay.querySelector('#go-bar');
-      const etaEl      = overlay.querySelector('#go-eta');
+      const ringFill = overlay.querySelector('#go-ring-fill');
+      const pctEl = overlay.querySelector('#go-pct');
+      const stepEl = overlay.querySelector('#go-step');
+      const barEl = overlay.querySelector('#go-bar');
+      const etaEl = overlay.querySelector('#go-eta');
       const CIRCUMFERENCE = 326.7;
       const start = Date.now();
       let stepIdx = 0;
@@ -438,19 +438,19 @@ export class CanvasPage {
         if (this._loadingDone) return; // stop when complete
         const elapsed = Date.now() - start;
         // Ease-out curve: fast at start, crawls near 90%
-        const raw    = Math.min(elapsed / cfg.duration, 1);
-        const eased  = 1 - Math.pow(1 - raw, 2.8);
-        const pct    = Math.floor(eased * 90); // max 90 until real done
+        const raw = Math.min(elapsed / cfg.duration, 1);
+        const eased = 1 - Math.pow(1 - raw, 2.8);
+        const pct = Math.floor(eased * 90); // max 90 until real done
 
         // ring
         const offset = CIRCUMFERENCE - (pct / 100) * CIRCUMFERENCE;
         if (ringFill) ringFill.style.strokeDashoffset = offset;
-        if (pctEl)    pctEl.textContent = `${pct}%`;
-        if (barEl)    barEl.style.width  = `${pct}%`;
+        if (pctEl) pctEl.textContent = `${pct}%`;
+        if (barEl) barEl.style.width = `${pct}%`;
 
         // step messages
         const nextStep = cfg.steps.findIndex(s => s.pct > pct);
-        const curIdx   = nextStep === -1 ? cfg.steps.length - 1 : Math.max(0, nextStep - 1);
+        const curIdx = nextStep === -1 ? cfg.steps.length - 1 : Math.max(0, nextStep - 1);
         if (curIdx !== stepIdx) {
           stepIdx = curIdx;
           if (stepEl) {
@@ -478,22 +478,22 @@ export class CanvasPage {
       this._loadingDone = true;
       if (this._loadingRAF) cancelAnimationFrame(this._loadingRAF);
 
-      const overlay  = document.getElementById('generating-overlay');
+      const overlay = document.getElementById('generating-overlay');
       if (!overlay) { resolve(); return; }
 
-      const ringFill  = overlay.querySelector('#go-ring-fill');
-      const pctEl     = overlay.querySelector('#go-pct');
-      const barEl     = overlay.querySelector('#go-bar');
-      const stepEl    = overlay.querySelector('#go-step');
-      const etaEl     = overlay.querySelector('#go-eta');
+      const ringFill = overlay.querySelector('#go-ring-fill');
+      const pctEl = overlay.querySelector('#go-pct');
+      const barEl = overlay.querySelector('#go-bar');
+      const stepEl = overlay.querySelector('#go-step');
+      const etaEl = overlay.querySelector('#go-eta');
       const CIRCUMFERENCE = 326.7;
 
       // Snap to 100%
       if (ringFill) { ringFill.style.transition = 'stroke-dashoffset 0.6s ease'; ringFill.style.strokeDashoffset = '0'; }
-      if (pctEl)    pctEl.textContent = '100%';
-      if (barEl)    { barEl.style.transition = 'width 0.6s ease'; barEl.style.width = '100%'; }
-      if (stepEl)   stepEl.textContent = '✓ Rig complete!';
-      if (etaEl)    etaEl.textContent  = 'Done!';
+      if (pctEl) pctEl.textContent = '100%';
+      if (barEl) { barEl.style.transition = 'width 0.6s ease'; barEl.style.width = '100%'; }
+      if (stepEl) stepEl.textContent = '✓ Rig complete!';
+      if (etaEl) etaEl.textContent = 'Done!';
 
       // Fade out after brief celebration
       setTimeout(() => {

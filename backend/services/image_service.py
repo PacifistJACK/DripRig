@@ -220,11 +220,41 @@ def _try_weshop_vton(person_path: Path, garment_path: Path) -> Path:
     return Path(str(result))
 
 
+def _try_nymbo_vton(person_path: Path, garment_path: Path) -> Path:
+    """Adapter for Nymbo/Virtual-Try-On — fast, open API, 300k+ likes."""
+    from gradio_client import Client, handle_file
+    logger.info("Trying fast model: Nymbo/Virtual-Try-On")
+    client = Client("Nymbo/Virtual-Try-On")
+    result = client.predict(
+        dict={
+            "background": handle_file(str(person_path)),
+            "layers": [],
+            "composite": None
+        },
+        garm_img=handle_file(str(garment_path)),
+        garment_des="",        # no description needed
+        is_checked=True,
+        is_checked_crop=False,
+        denoise_steps=30,
+        seed=42,
+        api_name="/tryon"
+    )
+    if isinstance(result, (list, tuple)):
+        r = result[0]
+        if isinstance(r, dict):
+            return Path(r.get("path") or r.get("value") or str(r))
+        return Path(str(r))
+    if isinstance(result, dict):
+        return Path(result.get("path") or result.get("value") or str(result))
+    return Path(str(result))
+
+
 # Priority-ordered list of model adapters — first one that succeeds wins
 _VTON_MODELS = [
-    ("CatVTON",     _try_catvton),
-    ("WeShopAI",    _try_weshop_vton),
-    ("sm4ll-VTON",  _try_sm4ll_vton),
+    ("NymboVTON", _try_nymbo_vton),
+    ("CatVTON",   _try_catvton),
+    ("WeShopAI",  _try_weshop_vton),
+    ("sm4ll-VTON",_try_sm4ll_vton),
 ]
 
 # Keywords that indicate a recoverable quota/capacity error → try fallback model
@@ -289,12 +319,15 @@ def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
 
     # ── 2. Build ordered model list based on user selection ──────────────────
     all_models = {
-        "fast":    ("CatVTON",     _try_catvton),
-        "quality": ("WeShopAI",    _try_weshop_vton),
+        "fast":    ("NymboVTON", _try_nymbo_vton),
+        "quality": ("WeShopAI",  _try_weshop_vton),
     }
     primary = all_models.get(model, all_models["fast"])
-    fallback = all_models["quality"] if model == "fast" else all_models["fast"]
-    ordered_models = [primary, fallback, ("sm4ll-VTON", _try_sm4ll_vton)]
+
+    if model == "fast":
+        ordered_models = [primary, ("CatVTON", _try_catvton), ("WeShopAI", _try_weshop_vton), ("sm4ll-VTON", _try_sm4ll_vton)]
+    else:
+        ordered_models = [primary, ("NymboVTON", _try_nymbo_vton), ("CatVTON", _try_catvton), ("sm4ll-VTON", _try_sm4ll_vton)]
 
     logger.info(f"AI Try-on | model={model} | person={person_url}  outfit={outfit_url}")
 
