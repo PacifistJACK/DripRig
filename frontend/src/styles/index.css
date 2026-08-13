@@ -2321,3 +2321,31 @@ img {
   color: #000 !important;
   box-shadow: 0 0 12px rgba(255, 184, 0, 0.4);
 }
+
+/* ============================================================
+   CREDITS DISPLAY
+   ============================================================ */
+.credits-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--on-surface-variant);
+  letter-spacing: 0.04em;
+}
+
+.credits-display__icon {
+  font-size: 15px;
+  color: var(--color-cyan);
+  opacity: 0.7;
+}
+
+.credits-display__text {
+  font-size: 12px;
+}
+
+.credits-display__text strong {
+  color: var(--color-amber);
+}

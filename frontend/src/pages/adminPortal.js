@@ -4,7 +4,7 @@
  * Secret Admin portal to view user profiles and their uploaded Person, Cloth, and Saved Try-On images.
  */
 import { db } from '../firebase.js';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, doc, getDoc, setDoc, updateDoc, increment } from 'firebase/firestore';
 
 function formatImageUrl(url) {
   if (!url) return '';
@@ -21,9 +21,9 @@ const PLACEHOLDER_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2
 export class AdminPortalPage {
   constructor() {
     this.el = null;
-    this.usersMap = {}; // { userId: { id, email, personPhotos: [], clothPhotos: [], savedLooks: [] } }
+    this.usersMap = {}; // { userId: { id, email, personPhotos: [], clothPhotos: [], savedLooks: [], credits: null } }
     this.selectedUserId = null;
-    this.activeTab = 'person'; // 'person' | 'cloth' | 'saved'
+    this.activeTab = 'person'; // 'person' | 'cloth' | 'saved' | 'credits'
   }
 
   render() {
@@ -161,6 +161,20 @@ export class AdminPortalPage {
             }
           });
         } catch (e) {}
+
+        // 3. Fetch user profile doc for credits
+        try {
+          const profileSnap = await getDoc(doc(db, 'users', uid));
+          if (profileSnap.exists()) {
+            this.usersMap[uid].credits         = profileSnap.data().credits ?? 0;
+            this.usersMap[uid].totalGenerations = profileSnap.data().totalGenerations ?? 0;
+          } else {
+            this.usersMap[uid].credits         = null; // never signed in to app
+            this.usersMap[uid].totalGenerations = 0;
+          }
+        } catch (e) {
+          this.usersMap[uid].credits = null;
+        }
       }
 
 
@@ -211,8 +225,8 @@ export class AdminPortalPage {
                 ${initial}
               </div>
               <div style="text-align: left;">
-                <div style="font-weight: 700; font-size: 0.88rem; color: ${isActive ? 'var(--color-amber)' : 'var(--on-surface)'};">${u.email}</div>
-                <div style="font-size: 0.72rem; color: var(--on-surface-variant);">${u.personPhotos.length} Person • ${u.clothPhotos.length} Cloth • ${u.savedLooks.length} Saved</div>
+                <div style="font-weight: 700; font-size: 0.88rem; color: ${isActive ? 'var(--color-amber)' : 'var(--on-surface)'};"}>${u.email}</div>
+                <div style="font-size: 0.72rem; color: var(--on-surface-variant);">${u.personPhotos.length} Person &bull; ${u.clothPhotos.length} Cloth &bull; ${u.savedLooks.length} Saved &bull; <span style="color:${u.credits === null ? 'var(--on-surface-variant)' : u.credits <= 2 ? '#ffb800' : '#00d9e7'}">${u.credits === null ? '? credits' : u.credits + ' credits'}</span></div>
               </div>
             </div>
           `;
@@ -227,8 +241,8 @@ export class AdminPortalPage {
             <span style="font-size: 0.75rem; color: var(--on-surface-variant); font-family: monospace;">UID: ${selectedUser.id}</span>
           </div>
 
-          <!-- 3 Sub-Division Tabs: Person | Cloth | Saved -->
-          <div style="display: flex; gap: 0.5rem; background: rgba(0,0,0,0.4); padding: 4px; border-radius: 0.6rem; border: 1px solid rgba(255,255,255,0.08);">
+          <!-- 3 Sub-Division Tabs: Person | Cloth | Saved | Credits -->
+          <div style="display: flex; gap: 0.5rem; background: rgba(0,0,0,0.4); padding: 4px; border-radius: 0.6rem; border: 1px solid rgba(255,255,255,0.08); flex-wrap: wrap;">
             <button data-tab="person" class="btn-admin-tab ${this.activeTab === 'person' ? 'btn-admin-tab--active' : ''}">
               👤 Person (${selectedUser.personPhotos.length})
             </button>
@@ -237,6 +251,9 @@ export class AdminPortalPage {
             </button>
             <button data-tab="saved" class="btn-admin-tab ${this.activeTab === 'saved' ? 'btn-admin-tab--active' : ''}">
               ✨ Saved (${selectedUser.savedLooks.length})
+            </button>
+            <button data-tab="credits" class="btn-admin-tab ${this.activeTab === 'credits' ? 'btn-admin-tab--active' : ''}" style="${this.activeTab === 'credits' ? '' : 'color:#00d9e7;'}">
+              🪙 Credits
             </button>
           </div>
         </div>
@@ -263,7 +280,119 @@ export class AdminPortalPage {
     });
 
     // Render Gallery Images for active tab
-    this.renderGalleryGrid(selectedUser);
+    if (this.activeTab === 'credits') {
+      this.renderCreditsEditor(selectedUser);
+    } else {
+      this.renderGalleryGrid(selectedUser);
+    }
+  }
+
+  async renderCreditsEditor(user) {
+    const gridEl = this.el.querySelector('#admin-gallery-grid');
+    const currentCredits = user.credits ?? 0;
+    const totalGens      = user.totalGenerations ?? 0;
+
+    gridEl.innerHTML = `
+      <div style="max-width: 420px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.25rem; padding: 0.5rem 0;">
+
+        <!-- Stats row -->
+        <div style="display: flex; gap: 1rem;">
+          <div style="flex:1; background: rgba(0,217,231,0.07); border: 1px solid rgba(0,217,231,0.2); border-radius: 0.75rem; padding: 1rem; text-align: center;">
+            <div style="font-size: 2rem; font-weight: 800; color: #00d9e7; font-family: var(--font-display);" id="admin-credit-val">${currentCredits === null ? '—' : currentCredits}</div>
+            <div style="font-size: 0.72rem; color: var(--on-surface-variant); letter-spacing: 0.1em; margin-top: 4px;">CURRENT CREDITS</div>
+          </div>
+          <div style="flex:1; background: rgba(255,184,0,0.07); border: 1px solid rgba(255,184,0,0.2); border-radius: 0.75rem; padding: 1rem; text-align: center;">
+            <div style="font-size: 2rem; font-weight: 800; color: #ffb800; font-family: var(--font-display);">${totalGens}</div>
+            <div style="font-size: 0.72rem; color: var(--on-surface-variant); letter-spacing: 0.1em; margin-top: 4px;">TOTAL GENERATIONS</div>
+          </div>
+        </div>
+
+        <!-- Set credits -->
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 0.75rem; padding: 1.25rem;">
+          <div style="font-size: 0.8rem; font-weight: 700; letter-spacing: 0.1em; color: var(--on-surface-variant); margin-bottom: 0.75rem;">SET EXACT BALANCE</div>
+          <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <input id="admin-set-amount" type="number" min="0" max="9999" value="${currentCredits ?? 0}"
+              style="flex:1; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.15); border-radius: 0.5rem; color: var(--on-surface); font-size: 1.1rem; font-weight: 700; padding: 10px 14px; outline: none; font-family: var(--font-display);" />
+            <button id="btn-set-credits" style="background: var(--color-amber); color: #000; font-weight: 800; font-size: 0.85rem; padding: 10px 20px; border-radius: 0.5rem; border: none; cursor: pointer; letter-spacing: 0.05em; white-space: nowrap;">SET</button>
+          </div>
+        </div>
+
+        <!-- Quick adjust -->
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 0.75rem; padding: 1.25rem;">
+          <div style="font-size: 0.8rem; font-weight: 700; letter-spacing: 0.1em; color: var(--on-surface-variant); margin-bottom: 0.75rem;">QUICK ADJUST</div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            ${[1, 5, 10, 25, 50].map(n => `
+              <button class="btn-add-credits" data-amount="${n}"
+                style="background: rgba(0,217,231,0.1); border: 1px solid rgba(0,217,231,0.3); color: #00d9e7; font-weight: 700; padding: 8px 16px; border-radius: 0.5rem; cursor: pointer; font-size: 0.85rem;">+${n}</button>
+            `).join('')}
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
+            ${[1, 5, 10].map(n => `
+              <button class="btn-sub-credits" data-amount="${n}"
+                style="background: rgba(255,82,82,0.1); border: 1px solid rgba(255,82,82,0.3); color: #ff5252; font-weight: 700; padding: 8px 16px; border-radius: 0.5rem; cursor: pointer; font-size: 0.85rem;">−${n}</button>
+            `).join('')}
+          </div>
+        </div>
+
+        <div id="admin-credits-msg" style="font-size: 0.8rem; color: var(--on-surface-variant); text-align: center; min-height: 1.2rem;"></div>
+      </div>
+    `;
+
+    const creditValEl = gridEl.querySelector('#admin-credit-val');
+    const msgEl       = gridEl.querySelector('#admin-credits-msg');
+    const userDocRef  = doc(db, 'users', user.id);
+
+    const flash = (msg, color = '#00d9e7') => {
+      msgEl.style.color = color;
+      msgEl.textContent = msg;
+      setTimeout(() => { msgEl.textContent = ''; }, 2500);
+    };
+
+    const refreshVal = (newVal) => {
+      user.credits = newVal;
+      this.usersMap[user.id].credits = newVal;
+      if (creditValEl) creditValEl.textContent = newVal;
+    };
+
+    // SET
+    gridEl.querySelector('#btn-set-credits')?.addEventListener('click', async () => {
+      const val = parseInt(gridEl.querySelector('#admin-set-amount').value, 10);
+      if (isNaN(val) || val < 0) { flash('Enter a valid number', '#ff5252'); return; }
+      try {
+        await setDoc(userDocRef, { credits: val }, { merge: true });
+        refreshVal(val);
+        flash(`✓ Credits set to ${val}`);
+      } catch (e) { flash('Failed: ' + e.message, '#ff5252'); }
+    });
+
+    // ADD
+    gridEl.querySelectorAll('.btn-add-credits').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const n = parseInt(btn.dataset.amount, 10);
+        try {
+          await updateDoc(userDocRef, { credits: increment(n) });
+          const snap = await getDoc(userDocRef);
+          const newVal = snap.data()?.credits ?? 0;
+          refreshVal(newVal);
+          flash(`✓ Added ${n} credit${n > 1 ? 's' : ''} → now ${newVal}`);
+        } catch (e) { flash('Failed: ' + e.message, '#ff5252'); }
+      });
+    });
+
+    // SUBTRACT
+    gridEl.querySelectorAll('.btn-sub-credits').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const n = parseInt(btn.dataset.amount, 10);
+        try {
+          const snap = await getDoc(userDocRef);
+          const cur  = snap.data()?.credits ?? 0;
+          const newVal = Math.max(0, cur - n);
+          await setDoc(userDocRef, { credits: newVal }, { merge: true });
+          refreshVal(newVal);
+          flash(`✓ Removed ${n} credit${n > 1 ? 's' : ''} → now ${newVal}`);
+        } catch (e) { flash('Failed: ' + e.message, '#ff5252'); }
+      });
+    });
   }
 
   renderGalleryGrid(user) {

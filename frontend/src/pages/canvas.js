@@ -28,7 +28,7 @@ export class CanvasPage {
     this.filledCount = 0;
     this.el = null;
     this._rigId = this._generateRigId();
-    this.selectedModel = 'fast'; // 'fast' | 'quality'
+    this.selectedModel = 'quality'; // 'fast' | 'quality'
   }
 
   _generateRigId() {
@@ -132,13 +132,19 @@ export class CanvasPage {
     modelWrap.innerHTML = `
       <span class="model-selector__label">Engine</span>
       <div class="model-selector__toggle" id="model-toggle">
-        <button class="model-selector__btn model-selector__btn--active" data-model="fast" id="btn-model-fast">
+        <button class="model-selector__btn" data-model="fast" id="btn-model-fast">
           <span class="material-symbols-outlined">bolt</span>
-          Fast
+          <span class="model-selector__btn-content">
+            <span class="model-selector__btn-title">Fast</span>
+            <span class="model-selector__btn-sub">Good accuracy · ~30 sec</span>
+          </span>
         </button>
-        <button class="model-selector__btn" data-model="quality" id="btn-model-quality">
+        <button class="model-selector__btn model-selector__btn--active" data-model="quality" id="btn-model-quality">
           <span class="material-symbols-outlined">auto_awesome</span>
-          Quality
+          <span class="model-selector__btn-content">
+            <span class="model-selector__btn-title">Quality</span>
+            <span class="model-selector__btn-sub">High accuracy · ~60 sec</span>
+          </span>
         </button>
       </div>
     `;
@@ -150,6 +156,10 @@ export class CanvasPage {
         modelWrap.querySelectorAll('.model-selector__btn').forEach(b =>
           b.classList.toggle('model-selector__btn--active', b === btn)
         );
+        // Refresh cost hint when model changes
+        import('../services/creditsService.js').then(({ getCredits }) => {
+          getCredits().then(b => this._updateCreditsUI(b));
+        });
       });
     });
 
@@ -167,7 +177,20 @@ export class CanvasPage {
     `;
     this.ctaBtn.addEventListener('click', () => this._handleGenerate());
     ctaWrap.appendChild(this.ctaBtn);
+
+    // Credits badge
+    this._creditsEl = document.createElement('div');
+    this._creditsEl.id = 'credits-display';
+    this._creditsEl.className = 'credits-display';
+    this._creditsEl.innerHTML = `
+      <span class="credits-display__icon material-symbols-outlined">toll</span>
+      <span class="credits-display__text" id="credits-text">Loading…</span>
+    `;
+    ctaWrap.appendChild(this._creditsEl);
     page.appendChild(ctaWrap);
+
+    // Load credits
+    this._loadCredits();
 
     this.el = page;
 
@@ -177,6 +200,25 @@ export class CanvasPage {
     });
 
     return page;
+  }
+
+  async _loadCredits() {
+    try {
+      const { getCredits, creditCostFor } = await import('../services/creditsService.js');
+      const balance = await getCredits();
+      this._updateCreditsUI(balance);
+    } catch (e) {
+      const el = document.getElementById('credits-text');
+      if (el) el.textContent = '— credits';
+    }
+  }
+
+  _updateCreditsUI(balance) {
+    const el = document.getElementById('credits-text');
+    if (!el) return;
+    const cost = this.selectedModel === 'quality' ? 2 : 1;
+    const color = balance === 0 ? '#ff5252' : balance <= 2 ? '#ffb800' : '#00d9e7';
+    el.innerHTML = `<span style="color:${color};font-weight:700">${balance}</span> credits left &nbsp;·&nbsp; this costs <strong>${cost}</strong>`;
   }
 
   _onSlotUpload(slotKey, filename, url) {
@@ -233,6 +275,18 @@ export class CanvasPage {
       logUploadForAdmin(personFilename, outfitFilename);
     }).catch(() => {});
 
+    // ── Credit check before generation ───────────────────────────────────────
+    const { hasEnoughCredits, deductCredits, creditCostFor, getCredits } =
+      await import('../services/creditsService.js');
+
+    const canAfford = await hasEnoughCredits(this.selectedModel);
+    if (!canAfford) {
+      const cost = creditCostFor(this.selectedModel);
+      showToast(`Not enough credits! This costs ${cost} credit${cost > 1 ? 's' : ''} — you have 0 left.`, 'error');
+      return;
+    }
+    // ─────────────────────────────────────────────────────────────────
+
     this._showGeneratingOverlay(true, this.selectedModel);
 
 
@@ -252,6 +306,16 @@ export class CanvasPage {
       data.person_url = personFilename;
       data.outfit_url = outfitFilename;
       await this._showGeneratingOverlay(false);
+
+      // Deduct credits after successful generation
+      if (data.model_used !== 'mock') {
+        try {
+          const newBalance = await deductCredits(this.selectedModel);
+          this._updateCreditsUI(newBalance);
+        } catch (e) {
+          console.warn('[Credits] Failed to deduct:', e);
+        }
+      }
 
 
       // Map model keys to display names
