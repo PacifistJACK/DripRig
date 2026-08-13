@@ -233,7 +233,7 @@ export class CanvasPage {
       logUploadForAdmin(personFilename, outfitFilename);
     }).catch(() => {});
 
-    this._showGeneratingOverlay(true);
+    this._showGeneratingOverlay(true, this.selectedModel);
 
 
     try {
@@ -251,7 +251,7 @@ export class CanvasPage {
       const data = await response.json();
       data.person_url = personFilename;
       data.outfit_url = outfitFilename;
-      this._showGeneratingOverlay(false);
+      await this._showGeneratingOverlay(false);
 
 
       // Map model keys to display names
@@ -267,45 +267,177 @@ export class CanvasPage {
 
       this.onGenerateResult(data);
     } catch (err) {
-      this._showGeneratingOverlay(false);
+      await this._showGeneratingOverlay(false);
       showToast(`Something went wrong — try a different engine! (${err.message || 'Generation failed'})`, 'error');
     }
   }
 
-  _showGeneratingOverlay(show) {
-    let overlay = document.getElementById('generating-overlay');
+  _showGeneratingOverlay(show, model = 'fast') {
+    const isFast = model === 'fast';
 
+    // ── CONFIG per model ──────────────────────────────────────────────────────
+    const cfg = isFast ? {
+      duration:  30000,   // 30s to reach 90%
+      accentA:   '#ffb800',
+      accentB:   '#00d9e7',
+      badge:     '⚡ FAST ENGINE',
+      badgeClass:'overlay-badge--fast',
+      steps: [
+        { pct: 8,  msg: 'Booting fast engine…' },
+        { pct: 22, msg: 'Parsing your fit…' },
+        { pct: 38, msg: 'Mapping body keypoints…' },
+        { pct: 52, msg: 'Warping the garment…' },
+        { pct: 66, msg: 'Blending textures…' },
+        { pct: 78, msg: 'Polishing edges…' },
+        { pct: 88, msg: 'Almost done…' },
+        { pct: 90, msg: 'Waiting for the server…' },
+      ],
+    } : {
+      duration:  60000,   // 60s to reach 90%
+      accentA:   '#c855ff',
+      accentB:   '#ff0df5',
+      badge:     '✨ QUALITY ENGINE',
+      badgeClass:'overlay-badge--quality',
+      steps: [
+        { pct: 5,  msg: 'Initialising quality model…' },
+        { pct: 15, msg: 'Analysing body geometry…' },
+        { pct: 28, msg: 'Segmenting garment fabric…' },
+        { pct: 42, msg: 'Running diffusion pass 1…' },
+        { pct: 56, msg: 'Running diffusion pass 2…' },
+        { pct: 68, msg: 'Upscaling details…' },
+        { pct: 79, msg: 'Refining shadows & folds…' },
+        { pct: 87, msg: 'Final quality check…' },
+        { pct: 90, msg: 'Awaiting server render…' },
+      ],
+    };
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // ── SHOW ─────────────────────────────────────────────────────────────────
     if (show) {
-      if (overlay) return;
-      overlay = document.createElement('div');
+      if (document.getElementById('generating-overlay')) return;
+
+      const overlay = document.createElement('div');
       overlay.id = 'generating-overlay';
-      overlay.className = 'generating-overlay';
+      overlay.className = `generating-overlay generating-overlay--${model}`;
       overlay.innerHTML = `
-        <div class="generating-spinner"></div>
-        <div class="generating-overlay__logo">DripRig</div>
-        <span class="generating-overlay__text">Constructing your rig…</span>
+        <div class="go-particles" id="go-particles"></div>
+        <div class="go-content">
+          <div class="go-logo">DripRig</div>
+          <div class="go-badge ${cfg.badgeClass}">${cfg.badge}</div>
+          <div class="go-ring-wrap">
+            <svg class="go-ring" viewBox="0 0 120 120">
+              <circle class="go-ring__track" cx="60" cy="60" r="52"/>
+              <circle class="go-ring__fill" id="go-ring-fill" cx="60" cy="60" r="52"
+                stroke-dasharray="326.7" stroke-dashoffset="326.7"
+                style="stroke:${cfg.accentA}"/>
+            </svg>
+            <div class="go-pct" id="go-pct">0%</div>
+          </div>
+          <div class="go-step" id="go-step">${cfg.steps[0].msg}</div>
+          <div class="go-bar-wrap">
+            <div class="go-bar" id="go-bar" style="background:linear-gradient(90deg,${cfg.accentA},${cfg.accentB})"></div>
+          </div>
+          <div class="go-eta" id="go-eta">~${isFast ? '30' : '60'}s remaining</div>
+        </div>
       `;
       document.body.appendChild(overlay);
 
-      const texts = [
-        'Constructing your rig…',
-        'Aligning components…',
-        'Rendering the fit…',
-        'Almost there…',
-      ];
-      let i = 0;
-      this._loadingTextInterval = setInterval(() => {
-        i = (i + 1) % texts.length;
-        const span = overlay?.querySelector('.generating-overlay__text');
-        if (span) span.textContent = texts[i];
-      }, 1200);
-    } else {
-      if (overlay) overlay.remove();
-      if (this._loadingTextInterval) {
-        clearInterval(this._loadingTextInterval);
-        this._loadingTextInterval = null;
+      // ── Animate floating particles ──────────────────────────────────────
+      const particlesEl = overlay.querySelector('#go-particles');
+      for (let i = 0; i < 18; i++) {
+        const p = document.createElement('div');
+        p.className = 'go-particle';
+        const size = 3 + Math.random() * 5;
+        p.style.cssText = [
+          `width:${size}px`, `height:${size}px`,
+          `left:${Math.random() * 100}%`,
+          `animation-delay:${Math.random() * 4}s`,
+          `animation-duration:${3 + Math.random() * 4}s`,
+          `background:${Math.random() > 0.5 ? cfg.accentA : cfg.accentB}`,
+          `opacity:${0.3 + Math.random() * 0.5}`,
+        ].join(';');
+        particlesEl.appendChild(p);
       }
+
+      // ── Smart progress: animate to 90% over `duration`, then hold ──────
+      const ringFill   = overlay.querySelector('#go-ring-fill');
+      const pctEl      = overlay.querySelector('#go-pct');
+      const stepEl     = overlay.querySelector('#go-step');
+      const barEl      = overlay.querySelector('#go-bar');
+      const etaEl      = overlay.querySelector('#go-eta');
+      const CIRCUMFERENCE = 326.7;
+      const start = Date.now();
+      let stepIdx = 0;
+      this._loadingDone = false;
+
+      const tick = () => {
+        if (this._loadingDone) return; // stop when complete
+        const elapsed = Date.now() - start;
+        // Ease-out curve: fast at start, crawls near 90%
+        const raw    = Math.min(elapsed / cfg.duration, 1);
+        const eased  = 1 - Math.pow(1 - raw, 2.8);
+        const pct    = Math.floor(eased * 90); // max 90 until real done
+
+        // ring
+        const offset = CIRCUMFERENCE - (pct / 100) * CIRCUMFERENCE;
+        if (ringFill) ringFill.style.strokeDashoffset = offset;
+        if (pctEl)    pctEl.textContent = `${pct}%`;
+        if (barEl)    barEl.style.width  = `${pct}%`;
+
+        // step messages
+        const nextStep = cfg.steps.findIndex(s => s.pct > pct);
+        const curIdx   = nextStep === -1 ? cfg.steps.length - 1 : Math.max(0, nextStep - 1);
+        if (curIdx !== stepIdx) {
+          stepIdx = curIdx;
+          if (stepEl) {
+            stepEl.style.opacity = '0';
+            setTimeout(() => {
+              if (stepEl) stepEl.textContent = cfg.steps[curIdx].msg;
+              if (stepEl) stepEl.style.opacity = '1';
+            }, 200);
+          }
+        }
+
+        // ETA countdown
+        const secLeft = Math.max(0, Math.round((cfg.duration - elapsed) / 1000));
+        if (etaEl) etaEl.textContent = pct >= 90 ? 'Finalising…' : `~${secLeft}s remaining`;
+
+        this._loadingRAF = requestAnimationFrame(tick);
+      };
+      this._loadingRAF = requestAnimationFrame(tick);
+
+      return; // show path ends here
     }
+
+    // ── HIDE — snap to 100% then fade out ────────────────────────────────
+    return new Promise(resolve => {
+      this._loadingDone = true;
+      if (this._loadingRAF) cancelAnimationFrame(this._loadingRAF);
+
+      const overlay  = document.getElementById('generating-overlay');
+      if (!overlay) { resolve(); return; }
+
+      const ringFill  = overlay.querySelector('#go-ring-fill');
+      const pctEl     = overlay.querySelector('#go-pct');
+      const barEl     = overlay.querySelector('#go-bar');
+      const stepEl    = overlay.querySelector('#go-step');
+      const etaEl     = overlay.querySelector('#go-eta');
+      const CIRCUMFERENCE = 326.7;
+
+      // Snap to 100%
+      if (ringFill) { ringFill.style.transition = 'stroke-dashoffset 0.6s ease'; ringFill.style.strokeDashoffset = '0'; }
+      if (pctEl)    pctEl.textContent = '100%';
+      if (barEl)    { barEl.style.transition = 'width 0.6s ease'; barEl.style.width = '100%'; }
+      if (stepEl)   stepEl.textContent = '✓ Rig complete!';
+      if (etaEl)    etaEl.textContent  = 'Done!';
+
+      // Fade out after brief celebration
+      setTimeout(() => {
+        overlay.style.transition = 'opacity 0.5s ease';
+        overlay.style.opacity = '0';
+        setTimeout(() => { overlay.remove(); resolve(); }, 500);
+      }, 700);
+    });
   }
 
   mount(parent) {
