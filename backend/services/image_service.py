@@ -133,12 +133,12 @@ async def validate_and_save(file_bytes: bytes, content_type: str, slot: str) -> 
 # the fallback chain above can call them all the same way.
 
 def _try_catvton(person_path: Path, garment_path: Path, cloth_type: str = "overall") -> Path:
-    """Adapter for zhengchong/CatVTON (Fast model)."""
+    """Adapter for zhengchong/CatVTON — diffusion-based, clean results."""
     import tempfile
     from PIL import Image
     from gradio_client import Client, handle_file
 
-    logger.info(f"Trying fast model: zhengchong/CatVTON (cloth_type={cloth_type})")
+    logger.info(f"Trying model: zhengchong/CatVTON (cloth_type={cloth_type})")
     client = Client("zhengchong/CatVTON")
 
     # Save clean RGB temporary PNG copies of inputs
@@ -162,8 +162,8 @@ def _try_catvton(person_path: Path, garment_path: Path, cloth_type: str = "overa
         },
         cloth_image=handle_file(garment_tmp),
         cloth_type=cloth_type if cloth_type in ("upper", "lower", "overall") else "overall",
-        num_inference_steps=30,
-        guidance_scale=2.5,
+        num_inference_steps=50,   # was 30 — more steps = sharper detail
+        guidance_scale=3.5,       # was 2.5 — higher = stronger garment adherence
         seed=42,
         show_type="result only",
         api_name="/submit_function"
@@ -221,9 +221,9 @@ def _try_weshop_vton(person_path: Path, garment_path: Path) -> Path:
 
 
 def _try_nymbo_vton(person_path: Path, garment_path: Path) -> Path:
-    """Adapter for Nymbo/Virtual-Try-On — fast, open API, 300k+ likes."""
+    """Adapter for Nymbo/Virtual-Try-On — fast fallback, open API."""
     from gradio_client import Client, handle_file
-    logger.info("Trying fast model: Nymbo/Virtual-Try-On")
+    logger.info("Trying model: Nymbo/Virtual-Try-On")
     client = Client("Nymbo/Virtual-Try-On")
     result = client.predict(
         dict={
@@ -235,7 +235,7 @@ def _try_nymbo_vton(person_path: Path, garment_path: Path) -> Path:
         garment_des="",        # no description needed
         is_checked=True,
         is_checked_crop=False,
-        denoise_steps=30,
+        denoise_steps=50,      # was 30 — more steps = cleaner output
         seed=42,
         api_name="/tryon"
     )
@@ -270,7 +270,7 @@ def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
     2-slot UI pipeline:
       - slots['person']  → full-body photo of the person
       - slots['outfit']  → photo of the outfit to try on
-      - model            → "fast" (CatVTON) | "quality" (WeShopAI)
+      - model            → "fast" (CatVTON, 50 steps) | "quality" (WeShopAI)
 
     Runs the user-selected model first. If it fails, falls back to other models cleanly.
     Falls back to a MOCK image only when all models fail.
@@ -319,15 +319,17 @@ def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
 
     # ── 2. Build ordered model list based on user selection ──────────────────
     all_models = {
-        "fast":    ("NymboVTON", _try_nymbo_vton),
-        "quality": ("WeShopAI",  _try_weshop_vton),
+        "fast":    ("CatVTON",  _try_catvton),    # CatVTON: diffusion-based, much cleaner than Nymbo
+        "quality": ("WeShopAI", _try_weshop_vton),
     }
     primary = all_models.get(model, all_models["fast"])
 
     if model == "fast":
-        ordered_models = [primary, ("CatVTON", _try_catvton), ("WeShopAI", _try_weshop_vton), ("sm4ll-VTON", _try_sm4ll_vton)]
+        # Fast chain: CatVTON (best quality fast) → NymboVTON → WeShopAI → sm4ll-VTON
+        ordered_models = [primary, ("NymboVTON", _try_nymbo_vton), ("WeShopAI", _try_weshop_vton), ("sm4ll-VTON", _try_sm4ll_vton)]
     else:
-        ordered_models = [primary, ("NymboVTON", _try_nymbo_vton), ("CatVTON", _try_catvton), ("sm4ll-VTON", _try_sm4ll_vton)]
+        # Quality chain: WeShopAI → CatVTON → NymboVTON → sm4ll-VTON
+        ordered_models = [primary, ("CatVTON", _try_catvton), ("NymboVTON", _try_nymbo_vton), ("sm4ll-VTON", _try_sm4ll_vton)]
 
     logger.info(f"AI Try-on | model={model} | person={person_url}  outfit={outfit_url}")
 

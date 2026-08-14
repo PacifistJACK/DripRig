@@ -164,7 +164,7 @@ export class CanvasPage {
         const hintEl = document.getElementById('model-hint');
         if (hintEl) {
           hintEl.textContent = btn.dataset.model === 'fast'
-            ? 'Good accuracy · ~30 sec'
+            ? 'Good accuracy · ~45 sec'
             : 'High accuracy · ~60 sec';
         }
         // Refresh cost hint when model changes
@@ -373,7 +373,7 @@ export class CanvasPage {
 
     // ── CONFIG per model ──────────────────────────────────────────────────────
     const cfg = isFast ? {
-      duration: 30000,   // 30s to reach 90%
+      duration: 45000,   // 45s to reach 90% (CatVTON @ 50 steps)
       accentA: '#ffb800',
       accentB: '#00d9e7',
       badge: '⚡ FAST ENGINE',
@@ -433,7 +433,7 @@ export class CanvasPage {
           <div class="go-bar-wrap">
             <div class="go-bar" id="go-bar" style="background:linear-gradient(90deg,${cfg.accentA},${cfg.accentB})"></div>
           </div>
-          <div class="go-eta" id="go-eta">~${isFast ? '30' : '60'}s remaining</div>
+          <div class="go-eta" id="go-eta">~${isFast ? '45' : '60'}s remaining</div>
         </div>
       `;
       document.body.appendChild(overlay);
