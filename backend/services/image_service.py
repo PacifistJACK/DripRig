@@ -4,6 +4,7 @@ import time
 import uuid
 import logging
 import shutil
+import requests
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 from dotenv import load_dotenv
@@ -37,7 +38,9 @@ try:
         "messagingSenderId": os.environ.get("FIREBASE_MESSAGING_SENDER_ID", ""),
         "appId":             os.environ.get("FIREBASE_APP_ID", ""),
         "measurementId":     os.environ.get("FIREBASE_MEASUREMENT_ID", ""),
-        "databaseURL":       ""
+        # pyrebase requires a databaseURL — use a placeholder if Realtime DB is not used
+        "databaseURL":       os.environ.get("FIREBASE_DATABASE_URL",
+                                f"https://{os.environ.get('FIREBASE_PROJECT_ID', 'placeholder')}-default-rtdb.firebaseio.com"),
     }
     firebase = pyrebase.initialize_app(firebaseConfig)
     storage = firebase.storage()
@@ -344,6 +347,16 @@ def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
             
             # Ensure generated output is saved cleanly as RGB JPEG (handles webp/png/rgba output)
             res_img = Image.open(generated_path).convert("RGB")
+
+            # ── Auto-crop side-by-side composites ───────────────────────────
+            # Some models (CatVTON, NymboVTON) return a 2-panel image
+            # [original person | try-on result] even when "result only" is set.
+            # Detect by aspect ratio: if width >= 1.6x height, take right half.
+            w, h = res_img.size
+            if w >= h * 1.6:
+                logger.info(f"{model_name}: detected side-by-side output ({w}x{h}), cropping to right half")
+                res_img = res_img.crop((w // 2, 0, w, h))
+
             res_img.save(result_path, "JPEG", quality=92)
             
             result_url = upload_to_firebase(result_path, result_filename)
