@@ -186,6 +186,11 @@ export class SlotComponent {
       return;
     }
 
+    // If replacing an existing image, notify parent to decrement count first
+    if (this.state === 'loaded') {
+      this.onRemove(this.slotKey);
+    }
+
     this._renderUploadingState();
 
     const formData = new FormData();
