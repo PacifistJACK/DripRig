@@ -954,7 +954,6 @@ img {
 .result-image-wrap {
   width: 100%;
   max-width: 480px;
-  max-height: 55vh;
   position: relative;
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -968,8 +967,8 @@ img {
 
 .result-image-wrap img {
   width: 100%;
-  height: 100%;
-  max-height: 55vh;
+  height: auto;         /* was height:100% — caused square images to overflow */
+  max-height: 68vh;     /* cap very tall images on small screens */
   object-fit: contain;
   display: block;
 }
