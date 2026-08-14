@@ -4,7 +4,7 @@
  * New users are automatically seeded with INITIAL_CREDITS on first use.
  */
 import { db, auth } from '../firebase.js';
-import { doc, getDoc, setDoc, updateDoc, increment } from 'firebase/firestore';
+import { doc, getDoc, setDoc, runTransaction, increment } from 'firebase/firestore';
 
 export const INITIAL_CREDITS   = 10;
 export const COST_FAST         = 1;
@@ -51,9 +51,11 @@ export function creditCostFor(model) {
 }
 
 /**
- * Deduct credits after a successful generation.
+ * Atomically deduct credits after a successful generation.
+ * Uses a Firestore transaction to prevent race conditions / double-spend.
  * @param {'fast'|'quality'} model
  * @returns {Promise<number>} new balance
+ * @throws if user has insufficient credits (race condition guard)
  */
 export async function deductCredits(model) {
   const user = auth.currentUser;
@@ -62,13 +64,23 @@ export async function deductCredits(model) {
   const cost = creditCostFor(model);
   const ref  = userRef(user.uid);
 
-  await updateDoc(ref, {
-    credits:          increment(-cost),
-    totalGenerations: increment(1),
+  const newBalance = await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    const current = snap.data()?.credits ?? 0;
+
+    if (current < cost) {
+      throw new Error(`Insufficient credits: need ${cost}, have ${current}`);
+    }
+
+    const updated = current - cost;
+    tx.update(ref, {
+      credits:          updated,
+      totalGenerations: increment(1),
+    });
+    return updated;
   });
 
-  const snap = await getDoc(ref);
-  return snap.data().credits ?? 0;
+  return newBalance;
 }
 
 /**

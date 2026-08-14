@@ -274,84 +274,97 @@ export class CanvasPage {
       return;
     }
 
-    // Send both slots to the backend
-    const payload = {
-      person: personFilename,
-      outfit: outfitFilename,
-      model: this.selectedModel,
-    };
-
-    // Log uploaded person photo to admin_uploads collection in Firebase Console
-    import('../services/savedLooksService.js').then(({ logUploadForAdmin }) => {
-      logUploadForAdmin(personFilename, outfitFilename);
-    }).catch(() => { });
-
-    // ── Credit check before generation ───────────────────────────────────────
-    const { hasEnoughCredits, deductCredits, creditCostFor, getCredits } =
-      await import('../services/creditsService.js');
-
-    const canAfford = await hasEnoughCredits(this.selectedModel);
-    if (!canAfford) {
-      const cost = creditCostFor(this.selectedModel);
-      showToast(`Not enough credits! This costs ${cost} credit${cost > 1 ? 's' : ''} — you have 0 left.`, 'error');
-      return;
-    }
-    // ─────────────────────────────────────────────────────────────────
-
-    this._showGeneratingOverlay(true, this.selectedModel);
-
+    // Lock button immediately to prevent double-tap / double-spend
+    this.ctaBtn.disabled = true;
 
     try {
-      const response = await fetch(`/api/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({ detail: 'Generation failed.' }));
-        throw new Error(err.detail || 'Generation failed.');
-      }
-
-      const data = await response.json();
-      data.person_url = personFilename;
-      data.outfit_url = outfitFilename;
-      await this._showGeneratingOverlay(false);
-
-      // Deduct credits after successful generation
-      if (data.model_used !== 'mock') {
-        try {
-          const newBalance = await deductCredits(this.selectedModel);
-          this._updateCreditsUI(newBalance);
-        } catch (e) {
-          console.warn('[Credits] Failed to deduct:', e);
-        }
-      }
-
-
-      // Map model keys to display names
-      const MODEL_NAMES = {
-        fast:         'Fast (NymboVTON)',
-        quality:      'Quality (WeShopAI)',
-        NymboVTON:   'Fast (NymboVTON)',
-        CatVTON:     'CatVTON',
-        WeShopAI:    'Quality (WeShopAI)',
-        'sm4ll-VTON':'sm4ll-VTON',
-        mock:         'Mock',
+      // Send both slots to the backend
+      const payload = {
+        person: personFilename,
+        outfit: outfitFilename,
+        model: this.selectedModel,
       };
-      const requestedName = MODEL_NAMES[this.selectedModel] || this.selectedModel;
-      const usedName = MODEL_NAMES[data.model_used] || data.model_used;
 
-      if (data.model_used === 'mock') {
-        showToast('⚠️ All engines are busy — showing placeholder. Try again later!', 'error');
-      } else if (data.model_used && data.model_used.toLowerCase() !== this.selectedModel) {
-        showToast(`⚡ ${requestedName} was unavailable — switched to ${usedName} automatically.`, 'info');
+      // Log uploaded person photo to admin_uploads collection in Firebase Console
+      import('../services/savedLooksService.js').then(({ logUploadForAdmin }) => {
+        logUploadForAdmin(personFilename, outfitFilename);
+      }).catch(() => { });
+
+      // ── Credit check before generation ───────────────────────────────────────
+      const { hasEnoughCredits, deductCredits, creditCostFor, getCredits } =
+        await import('../services/creditsService.js');
+
+      let balance;
+      try {
+        balance = await getCredits();
+      } catch (e) {
+        showToast('Could not load credits — check your connection and try again.', 'error');
+        return;
       }
 
-      this.onGenerateResult(data);
-    } catch (err) {
-      await this._showGeneratingOverlay(false);
-      showToast(`Something went wrong — try a different engine! (${err.message || 'Generation failed'})`, 'error');
+      const cost = creditCostFor(this.selectedModel);
+      if (balance < cost) {
+        showToast(`Not enough credits! This costs ${cost} credit${cost > 1 ? 's' : ''} — you only have ${balance} left.`, 'error');
+        return;
+      }
+      // ─────────────────────────────────────────────────────────────────
+
+      this._showGeneratingOverlay(true, this.selectedModel);
+
+      try {
+        const response = await fetch(`/api/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({ detail: 'Generation failed.' }));
+          throw new Error(err.detail || 'Generation failed.');
+        }
+
+        const data = await response.json();
+        data.person_url = personFilename;
+        data.outfit_url = outfitFilename;
+        await this._showGeneratingOverlay(false);
+
+        // Deduct credits after successful generation (atomic transaction)
+        if (data.model_used !== 'mock') {
+          try {
+            const newBalance = await deductCredits(this.selectedModel);
+            this._updateCreditsUI(newBalance);
+          } catch (e) {
+            console.warn('[Credits] Failed to deduct:', e);
+          }
+        }
+
+        // Map model keys to display names
+        const MODEL_NAMES = {
+          fast:         'Fast (NymboVTON)',
+          quality:      'Quality (WeShopAI)',
+          NymboVTON:   'Fast (NymboVTON)',
+          CatVTON:     'CatVTON',
+          WeShopAI:    'Quality (WeShopAI)',
+          'sm4ll-VTON':'sm4ll-VTON',
+          mock:         'Mock',
+        };
+        const requestedName = MODEL_NAMES[this.selectedModel] || this.selectedModel;
+        const usedName = MODEL_NAMES[data.model_used] || data.model_used;
+
+        if (data.model_used === 'mock') {
+          showToast('⚠️ All engines are busy — showing placeholder. Try again later!', 'error');
+        } else if (data.model_used && data.model_used.toLowerCase() !== this.selectedModel) {
+          showToast(`⚡ ${requestedName} was unavailable — switched to ${usedName} automatically.`, 'info');
+        }
+
+        this.onGenerateResult(data);
+      } catch (err) {
+        await this._showGeneratingOverlay(false);
+        showToast(`Something went wrong — try a different engine! (${err.message || 'Generation failed'})`, 'error');
+      }
+    } finally {
+      // Always re-enable button based on whether slots are still filled
+      this.ctaBtn.disabled = this.filledCount < 2;
     }
   }
 
