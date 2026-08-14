@@ -772,6 +772,12 @@ img {
   max-width: 480px;
   margin-top: 16px;
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.model-selector__row {
+  display: flex;
   align-items: center;
   gap: 12px;
 }
@@ -801,7 +807,7 @@ img {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 9px 12px;
   border-radius: var(--radius-sm);
   font-family: var(--font-display);
   font-size: 13px;
@@ -810,6 +816,13 @@ img {
   text-transform: uppercase;
   color: var(--on-surface-variant);
   transition: color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+  white-space: nowrap;
+}
+
+.model-selector__btn-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
 }
 
 .model-selector__btn .material-symbols-outlined {
@@ -826,6 +839,16 @@ img {
   color: var(--color-amber);
   box-shadow: 0 0 12px rgba(255, 184, 0, 0.15);
   border: 1px solid rgba(255, 184, 0, 0.3);
+}
+
+.model-selector__hint {
+  font-size: var(--text-label-sm);
+  color: var(--on-surface-variant);
+  text-align: center;
+  letter-spacing: 0.04em;
+  margin: 0;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
 }
 
 /* ============================================================
@@ -1135,6 +1158,7 @@ img {
 .delay-100 { animation-delay: 100ms; }
 .delay-200 { animation-delay: 200ms; }
 .delay-300 { animation-delay: 300ms; }
+.delay-350 { animation-delay: 350ms; }
 .delay-400 { animation-delay: 400ms; }
 .delay-500 { animation-delay: 500ms; }
 

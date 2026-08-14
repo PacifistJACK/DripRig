@@ -128,26 +128,30 @@ export class CanvasPage {
 
     // Model selector
     const modelWrap = document.createElement('div');
-    modelWrap.className = 'model-selector slide-up delay-350';
+    modelWrap.className = 'model-selector slide-up delay-300';
     modelWrap.innerHTML = `
-      <span class="model-selector__label">Engine</span>
-      <div class="model-selector__toggle" id="model-toggle">
-        <button class="model-selector__btn" data-model="fast" id="btn-model-fast">
-          <span class="material-symbols-outlined">bolt</span>
-          <span class="model-selector__btn-content">
+      <div class="model-selector__row">
+        <span class="model-selector__label">Engine</span>
+        <div class="model-selector__toggle" id="model-toggle">
+          <button class="model-selector__btn" data-model="fast" id="btn-model-fast">
+            <span class="material-symbols-outlined">bolt</span>
             <span class="model-selector__btn-title">Fast</span>
-            <span class="model-selector__btn-sub">Good accuracy · ~30 sec</span>
-          </span>
-        </button>
-        <button class="model-selector__btn model-selector__btn--active" data-model="quality" id="btn-model-quality">
-          <span class="material-symbols-outlined">auto_awesome</span>
-          <span class="model-selector__btn-content">
+          </button>
+          <button class="model-selector__btn model-selector__btn--active" data-model="quality" id="btn-model-quality">
+            <span class="material-symbols-outlined">auto_awesome</span>
             <span class="model-selector__btn-title">Quality</span>
-            <span class="model-selector__btn-sub">High accuracy · ~60 sec</span>
-          </span>
-        </button>
+          </button>
+        </div>
       </div>
     `;
+
+    // Hint text below toggle (updates on selection)
+    this._modelHintEl = document.createElement('p');
+    this._modelHintEl.className = 'model-selector__hint';
+    this._modelHintEl.id = 'model-hint';
+    this._modelHintEl.textContent = 'High accuracy · ~60 sec';
+    modelWrap.appendChild(this._modelHintEl);
+
     page.appendChild(modelWrap);
 
     modelWrap.querySelectorAll('.model-selector__btn').forEach(btn => {
@@ -156,6 +160,13 @@ export class CanvasPage {
         modelWrap.querySelectorAll('.model-selector__btn').forEach(b =>
           b.classList.toggle('model-selector__btn--active', b === btn)
         );
+        // Update hint text below toggle
+        const hintEl = document.getElementById('model-hint');
+        if (hintEl) {
+          hintEl.textContent = btn.dataset.model === 'fast'
+            ? 'Good accuracy · ~30 sec'
+            : 'High accuracy · ~60 sec';
+        }
         // Refresh cost hint when model changes
         import('../services/creditsService.js').then(({ getCredits }) => {
           getCredits().then(b => this._updateCreditsUI(b));
@@ -319,7 +330,15 @@ export class CanvasPage {
 
 
       // Map model keys to display names
-      const MODEL_NAMES = { fast: 'Fast (sm4ll-VTON)', quality: 'Quality (WeShopAI)', mock: 'Mock' };
+      const MODEL_NAMES = {
+        fast:         'Fast (NymboVTON)',
+        quality:      'Quality (WeShopAI)',
+        NymboVTON:   'Fast (NymboVTON)',
+        CatVTON:     'CatVTON',
+        WeShopAI:    'Quality (WeShopAI)',
+        'sm4ll-VTON':'sm4ll-VTON',
+        mock:         'Mock',
+      };
       const requestedName = MODEL_NAMES[this.selectedModel] || this.selectedModel;
       const usedName = MODEL_NAMES[data.model_used] || data.model_used;
 
