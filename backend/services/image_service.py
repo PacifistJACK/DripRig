@@ -322,17 +322,17 @@ def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
 
     # ── 2. Build ordered model list based on user selection ──────────────────
     all_models = {
-        "fast":    ("sm4ll-VTON", _try_sm4ll_vton),   # 🔁 Testing sm4ll-VTON as primary fast
-        "quality": ("WeShopAI",   _try_weshop_vton),
+        "fast":    ("CatVTON",  _try_catvton),    # CatVTON: diffusion-based, reliable
+        "quality": ("WeShopAI", _try_weshop_vton),
     }
     primary = all_models.get(model, all_models["fast"])
 
     if model == "fast":
-        # Fast chain: sm4ll-VTON → CatVTON → WeShopAI → NymboVTON
-        ordered_models = [primary, ("CatVTON", _try_catvton), ("WeShopAI", _try_weshop_vton), ("NymboVTON", _try_nymbo_vton)]
+        # Fast chain: CatVTON → WeShopAI (sm4ll-VTON & NymboVTON currently down)
+        ordered_models = [primary, ("WeShopAI", _try_weshop_vton)]
     else:
-        # Quality chain: WeShopAI → CatVTON → sm4ll-VTON → NymboVTON
-        ordered_models = [primary, ("CatVTON", _try_catvton), ("sm4ll-VTON", _try_sm4ll_vton), ("NymboVTON", _try_nymbo_vton)]
+        # Quality chain: WeShopAI → CatVTON
+        ordered_models = [primary, ("CatVTON", _try_catvton)]
 
     logger.info(f"AI Try-on | model={model} | person={person_url}  outfit={outfit_url}")
 
