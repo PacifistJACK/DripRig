@@ -164,7 +164,7 @@ export class CanvasPage {
         const hintEl = document.getElementById('model-hint');
         if (hintEl) {
           hintEl.textContent = btn.dataset.model === 'fast'
-            ? 'Good accuracy · ~30 sec'
+            ? 'Good accuracy · ~35 sec'
             : 'High accuracy · ~60 sec';
         }
         // Refresh cost hint when model changes
@@ -340,13 +340,13 @@ export class CanvasPage {
 
         // Map model keys to display names
         const MODEL_NAMES = {
-          fast:         'Fast (NymboVTON)',
-          quality:      'Quality (WeShopAI)',
-          NymboVTON:   'Fast (NymboVTON)',
-          CatVTON:     'CatVTON',
-          WeShopAI:    'Quality (WeShopAI)',
-          'sm4ll-VTON':'sm4ll-VTON',
-          mock:         'Mock',
+          fast: 'Fast (NymboVTON)',
+          quality: 'Quality (WeShopAI)',
+          NymboVTON: 'Fast (NymboVTON)',
+          CatVTON: 'CatVTON',
+          WeShopAI: 'Quality (WeShopAI)',
+          'sm4ll-VTON': 'sm4ll-VTON',
+          mock: 'Mock',
         };
         const requestedName = MODEL_NAMES[this.selectedModel] || this.selectedModel;
         const usedName = MODEL_NAMES[data.model_used] || data.model_used;
