@@ -273,7 +273,7 @@ def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
     2-slot UI pipeline:
       - slots['person']  → full-body photo of the person
       - slots['outfit']  → photo of the outfit to try on
-      - model            → "fast" (CatVTON, 50 steps) | "quality" (WeShopAI)
+      - model            → "fast" (NymboVTON) | "quality" (WeShopAI)
 
     Runs the user-selected model first. If it fails, falls back to other models cleanly.
     Falls back to a MOCK image only when all models fail.
@@ -322,14 +322,14 @@ def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
 
     # ── 2. Build ordered model list based on user selection ──────────────────
     all_models = {
-        "fast":    ("CatVTON",  _try_catvton),    # CatVTON: diffusion-based, much cleaner than Nymbo
-        "quality": ("WeShopAI", _try_weshop_vton),
+        "fast":    ("NymboVTON", _try_nymbo_vton),   # 🔁 Testing NymboVTON as primary fast
+        "quality": ("WeShopAI",  _try_weshop_vton),
     }
     primary = all_models.get(model, all_models["fast"])
 
     if model == "fast":
-        # Fast chain: CatVTON (best quality fast) → NymboVTON → WeShopAI → sm4ll-VTON
-        ordered_models = [primary, ("NymboVTON", _try_nymbo_vton), ("WeShopAI", _try_weshop_vton), ("sm4ll-VTON", _try_sm4ll_vton)]
+        # Fast chain: NymboVTON → CatVTON → WeShopAI → sm4ll-VTON
+        ordered_models = [primary, ("CatVTON", _try_catvton), ("WeShopAI", _try_weshop_vton), ("sm4ll-VTON", _try_sm4ll_vton)]
     else:
         # Quality chain: WeShopAI → CatVTON → NymboVTON → sm4ll-VTON
         ordered_models = [primary, ("CatVTON", _try_catvton), ("NymboVTON", _try_nymbo_vton), ("sm4ll-VTON", _try_sm4ll_vton)]

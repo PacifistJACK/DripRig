@@ -164,7 +164,7 @@ export class CanvasPage {
         const hintEl = document.getElementById('model-hint');
         if (hintEl) {
           hintEl.textContent = btn.dataset.model === 'fast'
-            ? 'Good accuracy · ~35 sec'
+            ? 'Good accuracy · ~30 sec'
             : 'High accuracy · ~60 sec';
         }
         // Refresh cost hint when model changes
