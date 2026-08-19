@@ -37,25 +37,27 @@ function openLightbox(imgSrc, lookId) {
         </div>
       </div>
 
-      <!-- Actions — same as result page -->
-      <div class="result-actions" style="max-width:100%;margin-top:16px;">
-        <a
-          id="lb-download"
-          href="${imgSrc}"
-          download="driprig-look.jpg"
-          class="btn-secondary"
-          title="Download"
-        >
-          <span class="material-symbols-outlined">download</span>
-          <span>Download</span>
-        </a>
-        <button id="lb-share" class="btn-secondary" title="Share">
-          <span class="material-symbols-outlined">share</span>
-          <span>Share</span>
-        </button>
-        <button id="lb-delete" class="btn-secondary btn-secondary--danger" title="Delete" data-id="${lookId}">
+      <!-- Actions: Download + Share row, then Delete full-width -->
+      <div class="lightbox-actions">
+        <div class="lightbox-actions__row">
+          <a
+            id="lb-download"
+            href="${imgSrc}"
+            download="driprig-look.jpg"
+            class="btn-secondary btn-secondary--download"
+            title="Download"
+          >
+            <span class="material-symbols-outlined">download</span>
+            <span>Download</span>
+          </a>
+          <button id="lb-share" class="btn-secondary btn-secondary--share" title="Share">
+            <span class="material-symbols-outlined">share</span>
+            <span>Share</span>
+          </button>
+        </div>
+        <button id="lb-delete" class="btn-secondary btn-secondary--danger lightbox-actions__delete" title="Delete look" data-id="${lookId}">
           <span class="material-symbols-outlined">delete</span>
-          <span>Delete</span>
+          <span>Remove from saved looks</span>
         </button>
       </div>
 

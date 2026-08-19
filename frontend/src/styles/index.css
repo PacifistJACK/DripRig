@@ -992,45 +992,131 @@ img {
   color: var(--color-amber);
 }
 
+/* ── Result action button strip ───────────────────────────── */
 .result-actions {
   width: 100%;
   max-width: 480px;
-  margin-top: 20px;
+  margin-top: 16px;
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
 
+/* ── Base secondary button ────────────────────────────────── */
 .btn-secondary {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 14px 16px;
+  gap: 5px;
+  padding: 14px 10px;
   background: var(--surface-container);
   border: 1px solid var(--surface-variant);
   border-radius: var(--radius-sm);
-  color: var(--on-surface);
-  font-size: var(--text-label-md);
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  color: var(--on-surface-variant);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+  transition:
+    background  var(--transition-fast),
+    border-color var(--transition-fast),
+    color        var(--transition-fast),
+    box-shadow   var(--transition-fast),
+    transform    var(--transition-fast);
   text-decoration: none;
-}
-
-.btn-secondary:hover {
-  background: var(--surface-container-high);
-  border-color: var(--color-cyan);
-  color: var(--color-cyan);
-}
-
-.btn-secondary:active {
-  transform: scale(0.96);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .btn-secondary .material-symbols-outlined {
-  font-size: 18px;
+  font-size: 22px;
+}
+
+/* — Save Look: amber accent — */
+.btn-secondary--save {
+  border-color: rgba(255, 184, 0, 0.25);
+  color: var(--color-amber);
+}
+.btn-secondary--save:hover {
+  background: rgba(255, 184, 0, 0.08);
+  border-color: rgba(255, 184, 0, 0.6);
+  box-shadow: 0 0 16px rgba(255, 184, 0, 0.15);
+  color: var(--color-amber);
+  transform: translateY(-1px);
+}
+
+/* — Download: cyan accent — */
+.btn-secondary--download {
+  border-color: rgba(0, 217, 231, 0.25);
+  color: var(--color-cyan);
+}
+.btn-secondary--download:hover {
+  background: rgba(0, 217, 231, 0.08);
+  border-color: rgba(0, 217, 231, 0.6);
+  box-shadow: 0 0 16px rgba(0, 217, 231, 0.15);
+  color: var(--color-cyan);
+  transform: translateY(-1px);
+}
+
+/* — Share: magenta accent — */
+.btn-secondary--share {
+  border-color: rgba(255, 13, 245, 0.2);
+  color: var(--color-magenta);
+}
+.btn-secondary--share:hover {
+  background: rgba(255, 13, 245, 0.08);
+  border-color: rgba(255, 13, 245, 0.5);
+  box-shadow: 0 0 16px rgba(255, 13, 245, 0.12);
+  color: var(--color-magenta);
+  transform: translateY(-1px);
+}
+
+/* — Delete: red accent — */
+.btn-secondary--danger {
+  border-color: rgba(255, 68, 68, 0.2);
+  color: #ff6b6b;
+}
+.btn-secondary--danger:hover {
+  background: rgba(255, 68, 68, 0.08);
+  border-color: rgba(255, 68, 68, 0.5);
+  box-shadow: 0 0 16px rgba(255, 68, 68, 0.12);
+  color: #ff4444;
+  transform: translateY(-1px);
+}
+
+.btn-secondary:active {
+  transform: scale(0.95) !important;
+  box-shadow: none !important;
+}
+
+/* ── Lightbox-specific action layout ─────────────────────── */
+/* Top row: Download + Share side by side, full width        */
+/* Bottom row: Delete full-width, subtler                    */
+.lightbox-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.lightbox-actions__row {
+  display: flex;
+  gap: 8px;
+}
+
+.lightbox-actions__row .btn-secondary {
+  flex: 1;
+}
+
+.lightbox-actions__delete {
+  width: 100%;
+  flex-direction: row !important;
+  gap: 8px !important;
+  padding: 11px 16px !important;
+  font-size: 11px !important;
+  letter-spacing: 0.1em !important;
 }
 
 .result-meta {

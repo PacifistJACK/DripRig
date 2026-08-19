@@ -64,12 +64,12 @@ export class ResultPage {
     const actions = document.createElement('div');
     actions.className = 'result-actions slide-up delay-300';
 
-    // Save Look button (styled using native DripRig button design system)
+    // Save Look
     const saveBtn = document.createElement('button');
-    saveBtn.className = 'btn-secondary';
+    saveBtn.className = 'btn-secondary btn-secondary--save';
     saveBtn.id = 'btn-save-firebase';
     saveBtn.innerHTML = `
-      <span class="material-symbols-outlined" style="color: var(--color-amber);">bookmark_add</span>
+      <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">bookmark_add</span>
       <span>Save Look</span>
     `;
     saveBtn.addEventListener('click', async () => {
@@ -79,8 +79,9 @@ export class ResultPage {
         const { showToast } = await import('../main.js');
         await saveLookToFirestore(data);
         showToast('Saved to your collection!', 'success');
-        saveBtn.innerHTML = `<span class="material-symbols-outlined" style="color: var(--color-cyan);">bookmark_added</span><span style="color: var(--color-cyan);">Saved!</span>`;
-        saveBtn.style.borderColor = 'var(--color-cyan)';
+        saveBtn.innerHTML = `<span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1;color:var(--color-cyan)">bookmark_added</span><span style="color:var(--color-cyan)">Saved!</span>`;
+        saveBtn.style.borderColor = 'rgba(0,217,231,0.5)';
+        saveBtn.style.color = 'var(--color-cyan)';
       } catch (err) {
         const { showToast } = await import('../main.js');
         showToast(err.message || 'Failed to save look.', 'error');
@@ -88,20 +89,20 @@ export class ResultPage {
       }
     });
 
-    // Download button
+    // Download
     const downloadBtn = document.createElement('a');
     downloadBtn.href = data.result_url;
     downloadBtn.download = 'driprig-outfit.jpg';
-    downloadBtn.className = 'btn-secondary';
+    downloadBtn.className = 'btn-secondary btn-secondary--download';
     downloadBtn.id = 'btn-download';
     downloadBtn.innerHTML = `
       <span class="material-symbols-outlined">download</span>
       <span>Download</span>
     `;
 
-    // Share button
+    // Share
     const shareBtn = document.createElement('button');
-    shareBtn.className = 'btn-secondary';
+    shareBtn.className = 'btn-secondary btn-secondary--share';
     shareBtn.id = 'btn-share';
     shareBtn.innerHTML = `
       <span class="material-symbols-outlined">share</span>
