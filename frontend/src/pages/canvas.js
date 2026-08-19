@@ -338,23 +338,8 @@ export class CanvasPage {
           }
         }
 
-        // Map model keys to display names
-        const MODEL_NAMES = {
-          fast: 'Fast (NymboVTON)',
-          quality: 'Quality (WeShopAI)',
-          NymboVTON: 'Fast (NymboVTON)',
-          CatVTON: 'CatVTON',
-          WeShopAI: 'Quality (WeShopAI)',
-          'sm4ll-VTON': 'sm4ll-VTON',
-          mock: 'Mock',
-        };
-        const requestedName = MODEL_NAMES[this.selectedModel] || this.selectedModel;
-        const usedName = MODEL_NAMES[data.model_used] || data.model_used;
-
         if (data.model_used === 'mock') {
           showToast('⚠️ All engines are busy — showing placeholder. Try again later!', 'error');
-        } else if (data.model_used && data.model_used.toLowerCase() !== this.selectedModel) {
-          showToast(`⚡ ${requestedName} was unavailable — switched to ${usedName} automatically.`, 'info');
         }
 
         this.onGenerateResult(data);
