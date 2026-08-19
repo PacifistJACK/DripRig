@@ -2372,3 +2372,129 @@ img {
 .credits-display__text strong {
   color: var(--color-amber);
 }
+
+/* ============================================================
+   SAVED LOOK LIGHTBOX
+   Full-screen image viewer with Download / Share / Delete
+   ============================================================ */
+.look-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.look-lightbox__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 4, 8, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.look-lightbox__panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 480px;
+  max-height: 95dvh;
+  background: var(--surface-container-low);
+  border: 1px solid rgba(255, 184, 0, 0.2);
+  border-bottom: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0 16px 24px;
+}
+
+.look-lightbox__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0 10px;
+  flex-shrink: 0;
+}
+
+.look-lightbox__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--on-surface);
+}
+
+.look-lightbox__close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-container-high);
+  border: 1px solid var(--surface-variant);
+  border-radius: 50%;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.look-lightbox__close:hover {
+  background: var(--surface-variant);
+  color: var(--on-surface);
+}
+
+.look-lightbox__img-wrap {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 2px solid rgba(255, 184, 0, 0.35);
+  box-shadow: 0 0 40px rgba(255, 184, 0, 0.15);
+  background: var(--surface-container);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.look-lightbox__img {
+  width: 100%;
+  height: auto;
+  max-height: 65dvh;
+  object-fit: contain;
+  display: block;
+}
+
+/* Danger variant for delete button in lightbox */
+.btn-secondary--danger {
+  border-color: rgba(255, 68, 68, 0.3);
+  color: #ff6b6b;
+}
+
+.btn-secondary--danger:hover {
+  background: rgba(255, 68, 68, 0.1);
+  border-color: #ff4444;
+  color: #ff4444;
+}
+
+/* On desktop — centre as a card instead of bottom sheet */
+@media (min-width: 540px) {
+  .look-lightbox {
+    align-items: center;
+  }
+
+  .look-lightbox__panel {
+    border-bottom: 1px solid rgba(255, 184, 0, 0.2);
+    border-radius: var(--radius-md);
+    max-height: 90dvh;
+    padding-bottom: 20px;
+  }
+}
