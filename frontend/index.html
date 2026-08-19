@@ -4,18 +4,132 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-  <!-- SEO -->
-  <title>DripRig — Virtual Try-On</title>
-  <meta name="description" content="DripRig is a virtual try-on app. Upload your top, bottom, shoes, and a photo of yourself — then generate your final styled look instantly." />
+  <!-- ═══════════════════════════════════════════════════════
+       PRIMARY SEO
+       The <title> and <description> are what Google shows
+       in search results — the clickable link + the snippet
+       of text underneath it.
+  ════════════════════════════════════════════════════════ -->
+  <title>DripRig — AI Virtual Try-On | See Any Outfit On You Instantly</title>
+
+  <!--
+    THIS is the description that appears under your link in Google search results.
+    Keep it between 150-160 characters. It should answer: what does the app do?
+  -->
+  <meta name="description" content="DripRig lets you virtually try on any outfit before you wear it. Upload your photo + any clothing item and our AI generates your complete styled look in seconds. Free to use." />
+
+  <!-- Keywords Google uses to understand your topic (secondary signal) -->
+  <meta name="keywords" content="DripRig, virtual try-on, AI fashion, outfit generator, try clothes online, virtual fitting room, AI outfit app, fashion AI, see outfit on me, try outfit virtually" />
+
+  <!-- Tell crawlers to fully index this page and show rich previews -->
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+
+  <!-- Author / brand -->
+  <meta name="author" content="DripRig" />
+
+  <!--
+    Canonical URL: the definitive address of your site.
+    Change this to your real deployed URL (e.g. https://driprig.j4du.in or your custom domain).
+    This prevents duplicate-content penalties if accessed via multiple URLs.
+  -->
+  <link rel="canonical" href="https://driprig.j4du.in/" />
+
+  <!-- ═══════════════════════════════════════════════════════
+       OPEN GRAPH
+       Controls how your link looks when shared on
+       WhatsApp, Facebook, LinkedIn, Discord, Slack, etc.
+  ════════════════════════════════════════════════════════ -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="DripRig" />
+  <meta property="og:title" content="DripRig — AI Virtual Try-On" />
+  <meta property="og:description" content="See exactly how any outfit looks on YOU — before buying or wearing it. Upload your photo + clothes. AI generates your look in seconds." />
+  <meta property="og:url" content="https://driprig.j4du.in/" />
+  <meta property="og:image" content="https://driprig.j4du.in/og-image.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="DripRig — AI Virtual Try-On App" />
+  <meta property="og:locale" content="en_US" />
+
+  <!-- ═══════════════════════════════════════════════════════
+       TWITTER / X CARD
+       Controls the preview card on X (Twitter)
+  ════════════════════════════════════════════════════════ -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="DripRig — AI Virtual Try-On" />
+  <meta name="twitter:description" content="See exactly how any outfit looks on YOU — before buying or wearing it. Upload your photo + clothes. AI generates your look in seconds." />
+  <meta name="twitter:image" content="https://driprig.j4du.in/og-image.jpg" />
+  <meta name="twitter:image:alt" content="DripRig — AI Virtual Try-On App" />
+
+  <!-- ═══════════════════════════════════════════════════════
+       PWA + MOBILE HOME SCREEN
+  ════════════════════════════════════════════════════════ -->
+  <link rel="manifest" href="/site.webmanifest" />
   <meta name="theme-color" content="#080808" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-
-  <!-- Open Graph -->
-  <meta property="og:title" content="DripRig — Virtual Try-On" />
-  <meta property="og:description" content="Construct your tactical fit. Upload clothes, generate your look." />
-  <meta property="og:type" content="website" />
+  <meta name="apple-mobile-web-app-title" content="DripRig" />
+  <link rel="apple-touch-icon" href="/logo.jpg" />
   <link rel="icon" type="image/jpeg" href="/logo.jpg" />
+
+  <!-- ═══════════════════════════════════════════════════════
+       JSON-LD STRUCTURED DATA — Google Rich Results
+       This is the most powerful signal for showing up when
+       someone searches "DripRig" by name — Google reads this
+       to understand exactly what your app is.
+       Two schemas:
+         1. Organization — establishes DripRig as a brand entity
+         2. WebApplication — describes the app for app-search results
+  ════════════════════════════════════════════════════════ -->
+  <script type="application/ld+json">
+  [
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "DripRig",
+      "url": "https://driprig.j4du.in/",
+      "logo": "https://driprig.j4du.in/logo.jpg",
+      "description": "DripRig is an AI-powered virtual try-on platform that lets anyone see exactly how any outfit looks on their body before buying or wearing it.",
+      "sameAs": []
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "DripRig",
+      "alternateName": ["DripRig App", "DripRig Virtual Try-On", "DripRig AI"],
+      "url": "https://driprig.j4du.in/",
+      "description": "AI-powered virtual try-on. Upload your photo and any outfit — DripRig generates a realistic image of you wearing it instantly. Uses state-of-the-art AI models including NymboVTON and WeShopAI.",
+      "applicationCategory": "LifestyleApplication",
+      "applicationSubCategory": "Fashion",
+      "operatingSystem": "Any",
+      "browserRequirements": "Requires a modern web browser with JavaScript enabled.",
+      "inLanguage": "en-US",
+      "isAccessibleForFree": true,
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "description": "Free credits included on sign-up."
+      },
+      "image": "https://driprig.j4du.in/og-image.jpg",
+      "screenshot": "https://driprig.j4du.in/og-image.jpg",
+      "featureList": [
+        "AI Virtual Try-On using advanced diffusion models",
+        "Upload your own photo as the base model",
+        "Try on any top, bottom, dress or outfit",
+        "Fast engine (~35 seconds) and Quality engine (~60 seconds)",
+        "Save and revisit your generated looks",
+        "Credits system — free credits on sign-up",
+        "Mobile-first responsive design",
+        "Google Sign-In authentication"
+      ],
+      "creator": {
+        "@type": "Organization",
+        "name": "DripRig",
+        "url": "https://driprig.j4du.in/"
+      }
+    }
+  ]
+  </script>
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />

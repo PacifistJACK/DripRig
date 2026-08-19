@@ -1,0 +1,8 @@
+# DripRig — robots.txt
+# Allow all search engine crawlers full access to the site
+
+User-agent: *
+Allow: /
+
+# Sitemap location — helps crawlers discover all pages
+Sitemap: https://driprig.j4du.in/sitemap.xml

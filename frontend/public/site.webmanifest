@@ -1,0 +1,36 @@
+{
+  "name": "DripRig — AI Virtual Try-On",
+  "short_name": "DripRig",
+  "description": "AI-powered virtual try-on. Upload clothes + your photo and see your styled look instantly.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080808",
+  "theme_color": "#080808",
+  "orientation": "portrait",
+  "scope": "/",
+  "lang": "en-US",
+  "categories": ["lifestyle", "shopping", "fashion"],
+  "icons": [
+    {
+      "src": "/logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/og-image.jpg",
+      "sizes": "1200x630",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "DripRig Virtual Try-On App"
+    }
+  ]
+}
