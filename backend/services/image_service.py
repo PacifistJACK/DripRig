@@ -252,12 +252,54 @@ def _try_nymbo_vton(person_path: Path, garment_path: Path) -> Path:
     return Path(str(result))
 
 
+def _try_fashn_vton(
+    person_path: Path,
+    garment_path: Path,
+    category: str = "one-pieces",
+    garment_photo_type: str = "model",
+    num_timesteps: int = 50,
+    guidance_scale: float = 1.5,
+    seed: int = 42,
+    segmentation_free: bool = True,
+) -> Path:
+    """Adapter for ehsansalehi63/miniroyal-vton-free (FASHN VTON v1.5).
+
+    Categories accepted by the model: tops | bottoms | one-pieces
+    Garment photo types:              model | flat-lay
+    Defaults to 'one-pieces' so full-outfit try-on works out of the box.
+    """
+    from gradio_client import Client, handle_file
+    logger.info(
+        f"Trying model: ehsansalehi63/miniroidal-vton-free "
+        f"(category={category}, photo_type={garment_photo_type})"
+    )
+    client = Client("ehsansalehi63/miniroyal-vton-free")
+    result = client.predict(
+        person_image=handle_file(str(person_path)),
+        garment_image=handle_file(str(garment_path)),
+        category=category,
+        garment_photo_type=garment_photo_type,
+        num_timesteps=num_timesteps,
+        guidance_scale=guidance_scale,
+        seed=seed,
+        segmentation_free=segmentation_free,
+        api_name="/try_on",
+    )
+    if isinstance(result, dict):
+        return Path(result.get("path") or result.get("value") or str(result))
+    if isinstance(result, (list, tuple)):
+        r = result[0]
+        return Path(r["path"] if isinstance(r, dict) else r)
+    return Path(str(result))
+
+
 # Priority-ordered list of model adapters — first one that succeeds wins
 _VTON_MODELS = [
-    ("NymboVTON", _try_nymbo_vton),
-    ("CatVTON",   _try_catvton),
-    ("WeShopAI",  _try_weshop_vton),
-    ("sm4ll-VTON",_try_sm4ll_vton),
+    ("FashnVTON",  _try_fashn_vton),
+    ("CatVTON",    _try_catvton),
+    ("WeShopAI",   _try_weshop_vton),
+    ("NymboVTON",  _try_nymbo_vton),
+    ("sm4ll-VTON", _try_sm4ll_vton),
 ]
 
 # Keywords that indicate a recoverable quota/capacity error → try fallback model
@@ -322,17 +364,26 @@ def generate_ai_tryon(slots: dict, model: str = "fast") -> tuple[str, int, str]:
 
     # ── 2. Build ordered model list based on user selection ──────────────────
     all_models = {
-        "fast":    ("CatVTON",  _try_catvton),    # CatVTON: diffusion-based, reliable
-        "quality": ("WeShopAI", _try_weshop_vton),
+        # Fast: FASHN VTON v1.5 (miniroyal-vton-free) — one-pieces default
+        "fast":    ("FashnVTON", _try_fashn_vton),
+        "quality": ("WeShopAI",  _try_weshop_vton),
     }
     primary = all_models.get(model, all_models["fast"])
 
     if model == "fast":
-        # Fast chain: CatVTON → WeShopAI (sm4ll-VTON & NymboVTON currently down)
-        ordered_models = [primary, ("WeShopAI", _try_weshop_vton)]
+        # Fast chain: FashnVTON → CatVTON → WeShopAI
+        ordered_models = [
+            primary,
+            ("CatVTON",  _try_catvton),
+            ("WeShopAI", _try_weshop_vton),
+        ]
     else:
-        # Quality chain: WeShopAI → CatVTON
-        ordered_models = [primary, ("CatVTON", _try_catvton)]
+        # Quality chain: WeShopAI → FashnVTON → CatVTON
+        ordered_models = [
+            primary,
+            ("FashnVTON", _try_fashn_vton),
+            ("CatVTON",   _try_catvton),
+        ]
 
     logger.info(f"AI Try-on | model={model} | person={person_url}  outfit={outfit_url}")
 
