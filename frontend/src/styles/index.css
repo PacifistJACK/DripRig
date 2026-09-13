@@ -1262,7 +1262,7 @@ img {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  /* no overflow:hidden — lets the ring glow bleed freely */
 }
 
 /* Floating particles background */
@@ -1270,6 +1270,7 @@ img {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /* overflow:hidden kept here so particles don't escape the overlay */
   overflow: hidden;
 }
 
@@ -1341,12 +1342,15 @@ img {
   width: 130px;
   height: 130px;
   margin: 4px 0;
+  /* allow the drop-shadow glow to paint outside the box */
+  overflow: visible;
 }
 
 .go-ring {
   width: 130px;
   height: 130px;
   transform: rotate(-90deg);
+  overflow: visible; /* let SVG filter bleed past its own viewBox */
 }
 
 .go-ring__track {
